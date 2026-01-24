@@ -3,8 +3,9 @@ use std::sync::mpsc::Receiver;
 use eframe::egui;
 
 use crate::benchmarks::apps::{
-    ArchiveOpsBenchmark, CargoBuildBenchmark, DefenderImpactBenchmark, GitOperationsBenchmark,
-    PowerShellBenchmark, RobocopyBenchmark, WindowsSearchBenchmark,
+    AppLaunchBenchmark, ArchiveOpsBenchmark, CargoBuildBenchmark, DefenderImpactBenchmark,
+    EventLogBenchmark, GitOperationsBenchmark, PowerShellBenchmark, RegistryBenchmark,
+    RobocopyBenchmark, TaskSchedulerBenchmark, WindowsSearchBenchmark,
 };
 use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
@@ -103,6 +104,11 @@ impl WorkBenchApp {
             Box::new(ThreadWakeBenchmark::new()),
             Box::new(MemoryLatencyBenchmark::new()),
             Box::new(MemoryBandwidthBenchmark::new()),
+            // Windows System Tools
+            Box::new(RegistryBenchmark::new()),       // Registry operations
+            Box::new(EventLogBenchmark::new()),       // Event log queries
+            Box::new(TaskSchedulerBenchmark::new()),  // Task scheduler
+            Box::new(AppLaunchBenchmark::new()),      // App launch times
         ];
 
         // Reset running state

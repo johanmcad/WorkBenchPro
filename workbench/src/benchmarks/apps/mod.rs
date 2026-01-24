@@ -1,15 +1,23 @@
+mod applaunch;
 mod archive_ops;
 mod cargo_build;
 mod defender;
+mod eventlog;
 mod git_ops;
 mod powershell;
+mod registry;
 mod robocopy;
+mod taskscheduler;
 mod windows_search;
 
+pub use applaunch::AppLaunchBenchmark;
 pub use archive_ops::ArchiveOpsBenchmark;
 pub use cargo_build::CargoBuildBenchmark;
 pub use defender::DefenderImpactBenchmark;
+pub use eventlog::EventLogBenchmark;
 pub use git_ops::GitOperationsBenchmark;
 pub use powershell::PowerShellBenchmark;
+pub use registry::RegistryBenchmark;
 pub use robocopy::RobocopyBenchmark;
+pub use taskscheduler::TaskSchedulerBenchmark;
 pub use windows_search::WindowsSearchBenchmark;
