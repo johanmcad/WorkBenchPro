@@ -6,6 +6,9 @@ use crate::benchmarks::disk::{
     FileEnumerationBenchmark, LargeFileReadBenchmark, MetadataOpsBenchmark, RandomReadBenchmark,
     TraversalBenchmark,
 };
+use crate::benchmarks::latency::{
+    ProcessSpawnBenchmark, StorageLatencyBenchmark, ThreadWakeBenchmark,
+};
 use crate::benchmarks::Benchmark;
 use crate::core::{BenchmarkMessage, BenchmarkRunner, RunConfig, SystemInfoCollector};
 use crate::export::JsonExporter;
@@ -68,11 +71,16 @@ impl WorkBenchApp {
     fn start_benchmark(&mut self) {
         // Create benchmark instances
         let benchmarks: Vec<Box<dyn Benchmark>> = vec![
+            // Project Operations (disk benchmarks)
             Box::new(FileEnumerationBenchmark::new()),
             Box::new(RandomReadBenchmark::new()),
             Box::new(MetadataOpsBenchmark::new()),
             Box::new(TraversalBenchmark::new()),
             Box::new(LargeFileReadBenchmark::new()),
+            // Responsiveness (latency benchmarks)
+            Box::new(StorageLatencyBenchmark::new()),
+            Box::new(ProcessSpawnBenchmark::new()),
+            Box::new(ThreadWakeBenchmark::new()),
         ];
 
         // Reset running state

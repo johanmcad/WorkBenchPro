@@ -1,3 +1,7 @@
-// Latency benchmarks - to be implemented in Phase 2
-// - Process spawn time
-// - Thread wake latency
+mod process_spawn;
+mod storage_latency;
+mod thread_wake;
+
+pub use process_spawn::ProcessSpawnBenchmark;
+pub use storage_latency::StorageLatencyBenchmark;
+pub use thread_wake::ThreadWakeBenchmark;
