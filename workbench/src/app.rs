@@ -2,6 +2,7 @@ use std::sync::mpsc::Receiver;
 
 use eframe::egui;
 
+use crate::benchmarks::apps::{ArchiveOpsBenchmark, CargoBuildBenchmark, GitOperationsBenchmark};
 use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
 };
@@ -75,17 +76,20 @@ impl WorkBenchApp {
     fn start_benchmark(&mut self) {
         // Create benchmark instances
         let benchmarks: Vec<Box<dyn Benchmark>> = vec![
-            // Project Operations (disk benchmarks)
+            // Project Operations (disk + git benchmarks)
             Box::new(FileEnumerationBenchmark::new()),
             Box::new(RandomReadBenchmark::new()),
             Box::new(MetadataOpsBenchmark::new()),
             Box::new(TraversalBenchmark::new()),
             Box::new(LargeFileReadBenchmark::new()),
-            // Build Performance (CPU benchmarks)
+            Box::new(GitOperationsBenchmark::new()),
+            // Build Performance (CPU + real app benchmarks)
             Box::new(SingleThreadBenchmark::new()),
             Box::new(MultiThreadBenchmark::new()),
             Box::new(MixedWorkloadBenchmark::new()),
             Box::new(SustainedWriteBenchmark::new()),
+            Box::new(CargoBuildBenchmark::new()),
+            Box::new(ArchiveOpsBenchmark::new()),
             // Responsiveness (latency + memory benchmarks)
             Box::new(StorageLatencyBenchmark::new()),
             Box::new(ProcessSpawnBenchmark::new()),
