@@ -2,7 +2,10 @@ use std::sync::mpsc::Receiver;
 
 use eframe::egui;
 
-use crate::benchmarks::apps::{ArchiveOpsBenchmark, CargoBuildBenchmark, GitOperationsBenchmark};
+use crate::benchmarks::apps::{
+    ArchiveOpsBenchmark, CargoBuildBenchmark, DefenderImpactBenchmark, GitOperationsBenchmark,
+    PowerShellBenchmark, RobocopyBenchmark, WindowsSearchBenchmark,
+};
 use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
 };
@@ -76,13 +79,16 @@ impl WorkBenchApp {
     fn start_benchmark(&mut self) {
         // Create benchmark instances
         let benchmarks: Vec<Box<dyn Benchmark>> = vec![
-            // Project Operations (disk + git benchmarks)
+            // Project Operations (disk + file operations)
             Box::new(FileEnumerationBenchmark::new()),
             Box::new(RandomReadBenchmark::new()),
             Box::new(MetadataOpsBenchmark::new()),
             Box::new(TraversalBenchmark::new()),
             Box::new(LargeFileReadBenchmark::new()),
             Box::new(GitOperationsBenchmark::new()),
+            Box::new(RobocopyBenchmark::new()),        // Windows file copy
+            Box::new(WindowsSearchBenchmark::new()),  // File search
+            Box::new(DefenderImpactBenchmark::new()), // AV impact
             // Build Performance (CPU + real app benchmarks)
             Box::new(SingleThreadBenchmark::new()),
             Box::new(MultiThreadBenchmark::new()),
@@ -90,6 +96,7 @@ impl WorkBenchApp {
             Box::new(SustainedWriteBenchmark::new()),
             Box::new(CargoBuildBenchmark::new()),
             Box::new(ArchiveOpsBenchmark::new()),
+            Box::new(PowerShellBenchmark::new()),     // PowerShell scripts
             // Responsiveness (latency + memory benchmarks)
             Box::new(StorageLatencyBenchmark::new()),
             Box::new(ProcessSpawnBenchmark::new()),
