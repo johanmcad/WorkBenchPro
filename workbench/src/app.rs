@@ -4,8 +4,10 @@ use eframe::egui;
 
 use crate::benchmarks::apps::{
     AppLaunchBenchmark, ArchiveOpsBenchmark, CargoBuildBenchmark, DefenderImpactBenchmark,
-    EventLogBenchmark, GitOperationsBenchmark, PowerShellBenchmark, RegistryBenchmark,
-    RobocopyBenchmark, TaskSchedulerBenchmark, WindowsSearchBenchmark,
+    EnvironmentBenchmark, EventLogBenchmark, GitOperationsBenchmark, NetworkBenchmark,
+    PowerShellBenchmark, ProcessesBenchmark, RegistryBenchmark, RobocopyBenchmark,
+    ServicesBenchmark, SymlinkBenchmark, TaskSchedulerBenchmark, WindowsSearchBenchmark,
+    WmicBenchmark,
 };
 use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
@@ -109,6 +111,12 @@ impl WorkBenchApp {
             Box::new(EventLogBenchmark::new()),       // Event log queries
             Box::new(TaskSchedulerBenchmark::new()),  // Task scheduler
             Box::new(AppLaunchBenchmark::new()),      // App launch times
+            Box::new(ServicesBenchmark::new()),       // Windows services
+            Box::new(NetworkBenchmark::new()),        // Network/DNS queries
+            Box::new(WmicBenchmark::new()),           // WMI system info
+            Box::new(ProcessesBenchmark::new()),      // Process management
+            Box::new(SymlinkBenchmark::new()),        // Symlink operations
+            Box::new(EnvironmentBenchmark::new()),    // Environment variables
         ];
 
         // Reset running state
