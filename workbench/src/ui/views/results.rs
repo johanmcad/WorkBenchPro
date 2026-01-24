@@ -163,4 +163,133 @@ impl ResultsView {
 
         ui.add_space(16.0);
     }
+
+    /// Returns (back_clicked, export_clicked, history_clicked)
+    pub fn show_with_save(ui: &mut Ui, run: &BenchmarkRun) -> (bool, bool, bool) {
+        let mut back_clicked = false;
+        let mut export_clicked = false;
+        let mut history_clicked = false;
+
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            ui.with_layout(Layout::top_down(Align::Center), |ui| {
+                ui.add_space(20.0);
+
+                // Title
+                ui.label(RichText::new("Benchmark Results").size(28.0).strong().color(Theme::ACCENT));
+                ui.label(
+                    RichText::new(format!(
+                        "{} - {}",
+                        run.machine_name,
+                        run.timestamp.format("%Y-%m-%d %H:%M")
+                    ))
+                    .color(Theme::TEXT_SECONDARY),
+                );
+
+                ui.add_space(10.0);
+
+                // Saved indicator
+                ui.label(
+                    RichText::new("Results saved to history")
+                        .color(Theme::SUCCESS)
+                        .italics(),
+                );
+
+                ui.add_space(20.0);
+
+                // Overall score
+                ui.add(LargeScoreCard::new(
+                    "Overall Score",
+                    run.scores.overall,
+                    run.scores.overall_max,
+                    run.scores.rating,
+                ));
+
+                ui.add_space(30.0);
+
+                // Category scores
+                ui.label(RichText::new("Category Scores").size(20.0).strong());
+                ui.add_space(16.0);
+
+                ui.horizontal_wrapped(|ui| {
+                    ui.add(ScoreCard::new(
+                        "Project Operations",
+                        run.scores.categories.project_operations.score,
+                        run.scores.categories.project_operations.max_score,
+                        run.scores.categories.project_operations.rating,
+                    ));
+
+                    ui.add(ScoreCard::new(
+                        "Build Performance",
+                        run.scores.categories.build_performance.score,
+                        run.scores.categories.build_performance.max_score,
+                        run.scores.categories.build_performance.rating,
+                    ));
+
+                    ui.add(ScoreCard::new(
+                        "Responsiveness",
+                        run.scores.categories.responsiveness.score,
+                        run.scores.categories.responsiveness.max_score,
+                        run.scores.categories.responsiveness.rating,
+                    ));
+
+                    if let Some(graphics) = &run.scores.categories.graphics {
+                        ui.add(ScoreCard::new(
+                            "Graphics",
+                            graphics.score,
+                            graphics.max_score,
+                            graphics.rating,
+                        ));
+                    }
+                });
+
+                ui.add_space(30.0);
+
+                // Detailed results
+                ui.label(RichText::new("Detailed Results").size(20.0).strong());
+                ui.add_space(16.0);
+
+                Self::show_category_results(ui, "Project Operations", &run.results.project_operations);
+                Self::show_category_results(ui, "Build Performance", &run.results.build_performance);
+                Self::show_category_results(ui, "Responsiveness", &run.results.responsiveness);
+
+                if let Some(graphics) = &run.results.graphics {
+                    Self::show_category_results(ui, "Graphics", graphics);
+                }
+
+                ui.add_space(30.0);
+
+                // Action buttons
+                ui.horizontal(|ui| {
+                    if ui
+                        .button(RichText::new("Back to Home").size(14.0))
+                        .clicked()
+                    {
+                        back_clicked = true;
+                    }
+
+                    ui.add_space(16.0);
+
+                    if ui
+                        .button(RichText::new("Export JSON").size(14.0))
+                        .clicked()
+                    {
+                        export_clicked = true;
+                    }
+
+                    ui.add_space(16.0);
+
+                    if ui
+                        .button(RichText::new("View History").size(14.0))
+                        .clicked()
+                    {
+                        history_clicked = true;
+                    }
+                });
+
+                ui.add_space(30.0);
+            });
+        });
+
+        (back_clicked, export_clicked, history_clicked)
+    }
 }

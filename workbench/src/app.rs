@@ -24,15 +24,21 @@ use crate::benchmarks::Benchmark;
 use crate::core::{BenchmarkMessage, BenchmarkRunner, RunConfig, SystemInfoCollector};
 use crate::export::JsonExporter;
 use crate::models::{BenchmarkRun, SystemInfo};
-use crate::ui::views::{HomeView, ResultsView, RunningView};
+use crate::storage::HistoryStorage;
+use crate::ui::views::{
+    ComparisonView, HistoryAction, HistoryView, HomeView, ResultsView, RunningView,
+};
 use crate::ui::Theme;
 
 /// Application state
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 enum AppState {
     Home,
     Running,
     Results,
+    History,
+    Comparison(usize, usize), // Indices of runs to compare
+    ViewingHistoricRun(usize), // Index of run to view
 }
 
 /// Main application
@@ -51,6 +57,11 @@ pub struct WorkBenchApp {
 
     // Results
     last_run: Option<BenchmarkRun>,
+
+    // History
+    history_storage: HistoryStorage,
+    history_runs: Vec<BenchmarkRun>,
+    history_selected: Vec<bool>,
 }
 
 impl WorkBenchApp {
@@ -61,6 +72,11 @@ impl WorkBenchApp {
         // Collect system info
         let system_info = SystemInfoCollector::collect();
         let machine_name = system_info.hostname.clone();
+
+        // Load history
+        let history_storage = HistoryStorage::new();
+        let history_runs = history_storage.load_all().unwrap_or_default();
+        let history_selected = vec![false; history_runs.len()];
 
         Self {
             state: AppState::Home,
@@ -76,6 +92,9 @@ impl WorkBenchApp {
             current_message: String::new(),
             completed_tests: Vec::new(),
             last_run: None,
+            history_storage,
+            history_runs,
+            history_selected,
         }
     }
 
@@ -89,9 +108,9 @@ impl WorkBenchApp {
             Box::new(TraversalBenchmark::new()),
             Box::new(LargeFileReadBenchmark::new()),
             Box::new(GitOperationsBenchmark::new()),
-            Box::new(RobocopyBenchmark::new()),        // Windows file copy
-            Box::new(WindowsSearchBenchmark::new()),  // File search
-            Box::new(DefenderImpactBenchmark::new()), // AV impact
+            Box::new(RobocopyBenchmark::new()),
+            Box::new(WindowsSearchBenchmark::new()),
+            Box::new(DefenderImpactBenchmark::new()),
             // Build Performance (CPU + real app benchmarks)
             Box::new(SingleThreadBenchmark::new()),
             Box::new(MultiThreadBenchmark::new()),
@@ -99,7 +118,7 @@ impl WorkBenchApp {
             Box::new(SustainedWriteBenchmark::new()),
             Box::new(CargoBuildBenchmark::new()),
             Box::new(ArchiveOpsBenchmark::new()),
-            Box::new(PowerShellBenchmark::new()),     // PowerShell scripts
+            Box::new(PowerShellBenchmark::new()),
             // Responsiveness (latency + memory benchmarks)
             Box::new(StorageLatencyBenchmark::new()),
             Box::new(ProcessSpawnBenchmark::new()),
@@ -107,16 +126,16 @@ impl WorkBenchApp {
             Box::new(MemoryLatencyBenchmark::new()),
             Box::new(MemoryBandwidthBenchmark::new()),
             // Windows System Tools
-            Box::new(RegistryBenchmark::new()),       // Registry operations
-            Box::new(EventLogBenchmark::new()),       // Event log queries
-            Box::new(TaskSchedulerBenchmark::new()),  // Task scheduler
-            Box::new(AppLaunchBenchmark::new()),      // App launch times
-            Box::new(ServicesBenchmark::new()),       // Windows services
-            Box::new(NetworkBenchmark::new()),        // Network/DNS queries
-            Box::new(WmicBenchmark::new()),           // WMI system info
-            Box::new(ProcessesBenchmark::new()),      // Process management
-            Box::new(SymlinkBenchmark::new()),        // Symlink operations
-            Box::new(EnvironmentBenchmark::new()),    // Environment variables
+            Box::new(RegistryBenchmark::new()),
+            Box::new(EventLogBenchmark::new()),
+            Box::new(TaskSchedulerBenchmark::new()),
+            Box::new(AppLaunchBenchmark::new()),
+            Box::new(ServicesBenchmark::new()),
+            Box::new(NetworkBenchmark::new()),
+            Box::new(WmicBenchmark::new()),
+            Box::new(ProcessesBenchmark::new()),
+            Box::new(SymlinkBenchmark::new()),
+            Box::new(EnvironmentBenchmark::new()),
         ];
 
         // Reset running state
@@ -138,7 +157,6 @@ impl WorkBenchApp {
     }
 
     fn process_messages(&mut self) {
-        // Take the receiver temporarily to avoid borrow issues
         let receiver = self.receiver.take();
 
         if let Some(rx) = receiver {
@@ -162,9 +180,17 @@ impl WorkBenchApp {
                         ));
                     }
                     BenchmarkMessage::AllComplete { run } => {
+                        // Save to history
+                        if let Err(e) = self.history_storage.save(&run) {
+                            tracing::error!("Failed to save to history: {}", e);
+                        }
+
                         self.last_run = Some(*run);
                         self.state = AppState::Results;
                         should_keep_receiver = false;
+
+                        // Reload history
+                        self.reload_history();
                     }
                     BenchmarkMessage::Error { error } => {
                         tracing::error!("Benchmark error: {}", error);
@@ -180,6 +206,11 @@ impl WorkBenchApp {
                 self.receiver = Some(rx);
             }
         }
+    }
+
+    fn reload_history(&mut self) {
+        self.history_runs = self.history_storage.load_all().unwrap_or_default();
+        self.history_selected = vec![false; self.history_runs.len()];
     }
 
     fn export_results(&self) {
@@ -199,6 +230,16 @@ impl WorkBenchApp {
             }
         }
     }
+
+    fn delete_history_run(&mut self, idx: usize) {
+        if idx < self.history_runs.len() {
+            let run = &self.history_runs[idx];
+            if let Err(e) = self.history_storage.delete(run) {
+                tracing::error!("Failed to delete run: {}", e);
+            }
+            self.reload_history();
+        }
+    }
 }
 
 impl eframe::App for WorkBenchApp {
@@ -211,11 +252,19 @@ impl eframe::App for WorkBenchApp {
         let mut action_cancel = false;
         let mut action_back = false;
         let mut action_export = false;
+        let mut action_history = false;
+        let mut action_save = false;
+        let mut history_action = HistoryAction::None;
+        let mut comparison_back = false;
+        let mut historic_view_back = false;
 
         egui::CentralPanel::default().show(ctx, |ui| {
-            match self.state {
+            match &self.state {
                 AppState::Home => {
-                    action_start = HomeView::show(ui, &self.system_info, &mut self.run_config);
+                    let (start, history) =
+                        HomeView::show_with_history(ui, &self.system_info, &mut self.run_config);
+                    action_start = start;
+                    action_history = history;
                 }
                 AppState::Running => {
                     action_cancel = RunningView::show(
@@ -228,9 +277,28 @@ impl eframe::App for WorkBenchApp {
                 }
                 AppState::Results => {
                     if let Some(run) = &self.last_run {
-                        let (back, export) = ResultsView::show(ui, run);
+                        let (back, export, save) = ResultsView::show_with_save(ui, run);
                         action_back = back;
                         action_export = export;
+                        action_save = save;
+                    }
+                }
+                AppState::History => {
+                    history_action =
+                        HistoryView::show(ui, &self.history_runs, &mut self.history_selected);
+                }
+                AppState::Comparison(idx_a, idx_b) => {
+                    if let (Some(run_a), Some(run_b)) = (
+                        self.history_runs.get(*idx_a),
+                        self.history_runs.get(*idx_b),
+                    ) {
+                        comparison_back = ComparisonView::show(ui, run_a, run_b);
+                    }
+                }
+                AppState::ViewingHistoricRun(idx) => {
+                    if let Some(run) = self.history_runs.get(*idx) {
+                        let (back, _export) = ResultsView::show(ui, run);
+                        historic_view_back = back;
                     }
                 }
             }
@@ -248,6 +316,34 @@ impl eframe::App for WorkBenchApp {
         }
         if action_export {
             self.export_results();
+        }
+        if action_history {
+            self.reload_history();
+            self.state = AppState::History;
+        }
+        if action_save {
+            // Already saved automatically when benchmark completes
+            tracing::info!("Results saved to history");
+        }
+        if comparison_back || historic_view_back {
+            self.state = AppState::History;
+        }
+
+        // Handle history actions
+        match history_action {
+            HistoryAction::None => {}
+            HistoryAction::Back => {
+                self.state = AppState::Home;
+            }
+            HistoryAction::ViewRun(idx) => {
+                self.state = AppState::ViewingHistoricRun(idx);
+            }
+            HistoryAction::CompareRuns(idx_a, idx_b) => {
+                self.state = AppState::Comparison(idx_a, idx_b);
+            }
+            HistoryAction::DeleteRun(idx) => {
+                self.delete_history_run(idx);
+            }
         }
     }
 }

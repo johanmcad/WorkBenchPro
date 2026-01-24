@@ -6,6 +6,7 @@ mod core;
 mod export;
 mod models;
 mod scoring;
+mod storage;
 mod ui;
 
 use anyhow::Result;

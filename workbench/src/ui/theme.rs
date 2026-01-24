@@ -29,6 +29,11 @@ impl Theme {
     // Neutral colors
     pub const BORDER: Color32 = Color32::from_rgb(226, 232, 240);
 
+    // Status colors
+    pub const SUCCESS: Color32 = Color32::from_rgb(16, 185, 129);   // Green
+    pub const ERROR: Color32 = Color32::from_rgb(239, 68, 68);      // Red
+    pub const WARNING: Color32 = Color32::from_rgb(245, 158, 11);   // Amber
+
     pub fn rating_color(rating: &Rating) -> Color32 {
         match rating {
             Rating::Excellent => Self::SCORE_EXCELLENT,
