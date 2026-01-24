@@ -2,6 +2,9 @@ use std::sync::mpsc::Receiver;
 
 use eframe::egui;
 
+use crate::benchmarks::cpu::{
+    MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
+};
 use crate::benchmarks::disk::{
     FileEnumerationBenchmark, LargeFileReadBenchmark, MetadataOpsBenchmark, RandomReadBenchmark,
     TraversalBenchmark,
@@ -9,6 +12,7 @@ use crate::benchmarks::disk::{
 use crate::benchmarks::latency::{
     ProcessSpawnBenchmark, StorageLatencyBenchmark, ThreadWakeBenchmark,
 };
+use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
 use crate::benchmarks::Benchmark;
 use crate::core::{BenchmarkMessage, BenchmarkRunner, RunConfig, SystemInfoCollector};
 use crate::export::JsonExporter;
@@ -77,10 +81,17 @@ impl WorkBenchApp {
             Box::new(MetadataOpsBenchmark::new()),
             Box::new(TraversalBenchmark::new()),
             Box::new(LargeFileReadBenchmark::new()),
-            // Responsiveness (latency benchmarks)
+            // Build Performance (CPU benchmarks)
+            Box::new(SingleThreadBenchmark::new()),
+            Box::new(MultiThreadBenchmark::new()),
+            Box::new(MixedWorkloadBenchmark::new()),
+            Box::new(SustainedWriteBenchmark::new()),
+            // Responsiveness (latency + memory benchmarks)
             Box::new(StorageLatencyBenchmark::new()),
             Box::new(ProcessSpawnBenchmark::new()),
             Box::new(ThreadWakeBenchmark::new()),
+            Box::new(MemoryLatencyBenchmark::new()),
+            Box::new(MemoryBandwidthBenchmark::new()),
         ];
 
         // Reset running state

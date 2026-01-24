@@ -1,3 +1,5 @@
-// Memory benchmarks - to be implemented in Phase 3
-// - Memory latency
-// - Memory bandwidth
+mod bandwidth;
+mod latency;
+
+pub use bandwidth::MemoryBandwidthBenchmark;
+pub use latency::MemoryLatencyBenchmark;
