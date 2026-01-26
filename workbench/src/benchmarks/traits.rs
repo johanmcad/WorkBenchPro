@@ -8,7 +8,6 @@ pub enum Category {
     ProjectOperations,
     BuildPerformance,
     Responsiveness,
-    Graphics,
 }
 
 impl Category {
@@ -17,7 +16,6 @@ impl Category {
             Category::ProjectOperations => "Project Operations",
             Category::BuildPerformance => "Build Performance",
             Category::Responsiveness => "Responsiveness",
-            Category::Graphics => "Graphics",
         }
     }
 

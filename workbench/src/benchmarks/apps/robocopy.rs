@@ -22,14 +22,12 @@ impl RobocopyBenchmark {
     }
 
     fn is_robocopy_available() -> bool {
+        // Just check if robocopy can be executed - any output means it exists
+        // robocopy /? returns exit code 16 but still produces help output
         Command::new("robocopy")
             .arg("/?")
             .output()
-            .map(|o| {
-                // Robocopy returns various exit codes, but if it runs, it's available
-                // Exit code 16 means serious error, anything else is "success"
-                o.status.code().map(|c| c < 16).unwrap_or(false)
-            })
+            .map(|o| !o.stdout.is_empty() || !o.stderr.is_empty())
             .unwrap_or(false)
     }
 
@@ -222,20 +220,6 @@ impl Benchmark for RobocopyBenchmark {
         let avg_mirror = mirror_times.iter().sum::<f64>() / mirror_times.len() as f64;
         let avg_total = (avg_copy + avg_mirror) / 2.0;
 
-        // Score based on average time
-        // <1s = 500, <2s = 400, <5s = 300, <10s = 200, >10s = 100
-        let score = if avg_total < 1.0 {
-            500
-        } else if avg_total < 2.0 {
-            400
-        } else if avg_total < 5.0 {
-            300
-        } else if avg_total < 10.0 {
-            200
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [copy_times, mirror_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -253,8 +237,6 @@ impl Benchmark for RobocopyBenchmark {
             ),
             value: avg_total,
             unit: "s".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum(),

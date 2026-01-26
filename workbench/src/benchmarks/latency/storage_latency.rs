@@ -8,7 +8,6 @@ use rand::Rng;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Storage latency distribution benchmark
 /// Measures P50, P95, P99, P99.9 latency for random 4KB reads
@@ -167,9 +166,8 @@ impl Benchmark for StorageLatencyBenchmark {
             / num_reads as f64;
         let std_dev = variance.sqrt();
 
-        // Convert P99 to ms for scoring (threshold expects ms)
+        // Convert P99 to ms for display
         let p99_ms = p99 / 1000.0;
-        let score = thresholds::storage_latency_score(p99_ms);
 
         progress.update(1.0, "Complete");
 
@@ -179,8 +177,6 @@ impl Benchmark for StorageLatencyBenchmark {
             description: self.description().to_string(),
             value: p99_ms,
             unit: "ms (P99)".to_string(),
-            score,
-            max_score: 700,
             details: TestDetails {
                 iterations: num_reads as u32,
                 duration_secs: sum / 1_000_000.0,

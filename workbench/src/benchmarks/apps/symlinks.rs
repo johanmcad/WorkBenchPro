@@ -181,19 +181,6 @@ impl Benchmark for SymlinkBenchmark {
         let avg_traverse = traverse_times.iter().sum::<f64>() / traverse_times.len() as f64;
         let avg_combined = (avg_create + avg_read + avg_traverse) / 3.0;
 
-        // Score: faster is better
-        let score = if avg_combined < 20.0 {
-            350
-        } else if avg_combined < 50.0 {
-            300
-        } else if avg_combined < 100.0 {
-            250
-        } else if avg_combined < 200.0 {
-            200
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [create_times, read_times, traverse_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -212,8 +199,6 @@ impl Benchmark for SymlinkBenchmark {
             ),
             value: avg_combined,
             unit: "ms".to_string(),
-            score,
-            max_score: 350,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

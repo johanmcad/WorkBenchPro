@@ -7,7 +7,6 @@ use anyhow::Result;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Directory traversal with content benchmark - simulates search in files
 pub struct TraversalBenchmark {
@@ -171,9 +170,6 @@ impl Benchmark for TraversalBenchmark {
         // Calculate files per second (using median)
         let files_per_sec = (files_counted as f64 / median) * 1000.0;
 
-        // Score based on files/sec
-        let score = thresholds::traversal_score(files_per_sec);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -182,8 +178,6 @@ impl Benchmark for TraversalBenchmark {
             description: self.description().to_string(),
             value: files_per_sec,
             unit: "files/sec".to_string(),
-            score,
-            max_score: 400,
             details: TestDetails {
                 iterations: num_runs as u32,
                 duration_secs: sum / 1000.0,

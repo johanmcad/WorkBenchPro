@@ -122,19 +122,6 @@ impl Benchmark for WmicBenchmark {
         let avg_list = list_times.iter().sum::<f64>() / list_times.len() as f64;
         let avg_combined = (avg_query + avg_list) / 2.0;
 
-        // Score: faster is better (WMIC can be slow)
-        let score = if avg_combined < 100.0 {
-            300
-        } else if avg_combined < 200.0 {
-            250
-        } else if avg_combined < 500.0 {
-            200
-        } else if avg_combined < 1000.0 {
-            150
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [query_times, list_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -152,8 +139,6 @@ impl Benchmark for WmicBenchmark {
             ),
             value: avg_combined,
             unit: "ms".to_string(),
-            score,
-            max_score: 300,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

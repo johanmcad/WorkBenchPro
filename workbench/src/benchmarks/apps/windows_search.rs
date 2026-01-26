@@ -237,20 +237,6 @@ impl Benchmark for WindowsSearchBenchmark {
 
         let avg_combined = (avg_filename + avg_content + avg_recursive) / 3.0;
 
-        // Score: faster is better
-        // <50ms = 400, <100ms = 350, <200ms = 300, <500ms = 200, >500ms = 100
-        let score = if avg_combined < 50.0 {
-            400
-        } else if avg_combined < 100.0 {
-            350
-        } else if avg_combined < 200.0 {
-            300
-        } else if avg_combined < 500.0 {
-            200
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [filename_times, content_times, recursive_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -269,8 +255,6 @@ impl Benchmark for WindowsSearchBenchmark {
             ),
             value: avg_combined,
             unit: "ms".to_string(),
-            score,
-            max_score: 400,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

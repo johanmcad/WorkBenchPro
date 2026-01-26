@@ -163,20 +163,6 @@ impl Benchmark for DefenderImpactBenchmark {
         let total_time = avg_create + avg_modify + avg_read + avg_delete;
         let avg_per_op = total_time / total_ops;
 
-        // Score: lower overhead is better
-        // <0.5ms/op = 400, <1ms = 350, <2ms = 300, <5ms = 200, >5ms = 100
-        let score = if avg_per_op < 0.5 {
-            400
-        } else if avg_per_op < 1.0 {
-            350
-        } else if avg_per_op < 2.0 {
-            300
-        } else if avg_per_op < 5.0 {
-            200
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [create_times, modify_times, read_times, delete_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -196,8 +182,6 @@ impl Benchmark for DefenderImpactBenchmark {
             ),
             value: avg_per_op,
             unit: "ms/op".to_string(),
-            score,
-            max_score: 400,
             details: TestDetails {
                 iterations: (iterations * 4) as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

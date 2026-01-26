@@ -8,7 +8,6 @@ use rand::Rng;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Small file random read benchmark - simulates loading source files
 pub struct RandomReadBenchmark {
@@ -150,9 +149,6 @@ impl Benchmark for RandomReadBenchmark {
         let percentiles = Percentiles::from_sorted_values(&latencies_ms);
         let p99 = percentiles.p99;
 
-        // Score based on P99 latency
-        let score = thresholds::storage_latency_score(p99);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -161,8 +157,6 @@ impl Benchmark for RandomReadBenchmark {
             description: self.description().to_string(),
             value: p99,
             unit: "ms (P99)".to_string(),
-            score,
-            max_score: 600,
             details: TestDetails {
                 iterations: num_reads as u32,
                 duration_secs: total_duration,

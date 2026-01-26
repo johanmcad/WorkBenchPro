@@ -7,8 +7,7 @@ use rand::Rng;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
-use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
+use crate::models::{TestDetails, TestResult};
 
 /// Large file sequential read benchmark - simulates opening large CAD files
 pub struct LargeFileReadBenchmark {
@@ -156,9 +155,6 @@ impl Benchmark for LargeFileReadBenchmark {
             / speeds_mb_per_sec.len() as f64;
         let std_dev = variance.sqrt();
 
-        // Score based on MB/s
-        let score = thresholds::sequential_read_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -167,8 +163,6 @@ impl Benchmark for LargeFileReadBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "MB/s".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: num_runs as u32,
                 duration_secs: (2048.0 * num_runs as f64) / mean,

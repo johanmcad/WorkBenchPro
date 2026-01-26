@@ -1,7 +1,5 @@
 use egui::{Color32, FontFamily, FontId, Style, TextStyle, Visuals};
 
-use crate::models::Rating;
-
 /// Application theme and colors based on 05-ui-design.md
 pub struct Theme;
 
@@ -10,6 +8,7 @@ impl Theme {
     pub const BG_PRIMARY: Color32 = Color32::from_rgb(248, 250, 252);   // #f8fafc
     pub const BG_CARD: Color32 = Color32::WHITE;
     pub const BG_DARK: Color32 = Color32::from_rgb(26, 26, 46);         // #1a1a2e
+    pub const BG_SECONDARY: Color32 = Color32::from_rgb(241, 245, 249); // #f1f5f9
 
     // Text colors
     pub const TEXT_PRIMARY: Color32 = Color32::from_rgb(30, 41, 59);    // #1e293b
@@ -19,12 +18,10 @@ impl Theme {
     pub const ACCENT: Color32 = Color32::from_rgb(15, 52, 96);          // #0f3460
     pub const ACCENT_HOVER: Color32 = Color32::from_rgb(26, 74, 122);
 
-    // Rating colors
-    pub const SCORE_EXCELLENT: Color32 = Color32::from_rgb(16, 185, 129);   // green
-    pub const SCORE_GOOD: Color32 = Color32::from_rgb(59, 130, 246);        // blue
-    pub const SCORE_ACCEPTABLE: Color32 = Color32::from_rgb(245, 158, 11);  // amber
-    pub const SCORE_POOR: Color32 = Color32::from_rgb(239, 68, 68);         // red
-    pub const SCORE_INADEQUATE: Color32 = Color32::from_rgb(127, 29, 29);   // dark red
+    // Comparison colors (for value comparison display)
+    pub const BETTER: Color32 = Color32::from_rgb(16, 185, 129);        // green - better performance
+    pub const WORSE: Color32 = Color32::from_rgb(239, 68, 68);          // red - worse performance
+    pub const NEUTRAL: Color32 = Color32::from_rgb(100, 116, 139);      // gray - same/similar
 
     // Neutral colors
     pub const BORDER: Color32 = Color32::from_rgb(226, 232, 240);       // #e2e8f0
@@ -53,19 +50,18 @@ impl Theme {
     pub const PROGRESS_ROUNDING: f32 = 4.0;
     pub const BADGE_ROUNDING: f32 = 4.0;
 
-    pub fn rating_color(rating: &Rating) -> Color32 {
-        match rating {
-            Rating::Excellent => Self::SCORE_EXCELLENT,
-            Rating::Good => Self::SCORE_GOOD,
-            Rating::Acceptable => Self::SCORE_ACCEPTABLE,
-            Rating::Poor => Self::SCORE_POOR,
-            Rating::Inadequate => Self::SCORE_INADEQUATE,
+    /// Get color for comparison diff percentage
+    /// positive diff = better (green), negative diff = worse (red)
+    /// `higher_is_better` indicates if higher values are better for this metric
+    pub fn diff_color(diff_percent: f64, higher_is_better: bool) -> Color32 {
+        let threshold = 5.0; // 5% threshold for "same"
+        if diff_percent.abs() < threshold {
+            Self::NEUTRAL
+        } else if (diff_percent > 0.0) == higher_is_better {
+            Self::BETTER
+        } else {
+            Self::WORSE
         }
-    }
-
-    pub fn rating_bg_color(rating: &Rating) -> Color32 {
-        let color = Self::rating_color(rating);
-        Color32::from_rgba_unmultiplied(color.r(), color.g(), color.b(), 38) // 15% opacity
     }
 
     pub fn apply(ctx: &egui::Context) {
@@ -95,10 +91,10 @@ impl Theme {
 
         style.visuals = visuals;
 
-        // Apply spacing
-        style.spacing.item_spacing = egui::vec2(8.0, 8.0);
-        style.spacing.window_margin = egui::Margin::same(16.0);
-        style.spacing.button_padding = egui::vec2(12.0, 6.0);
+        // Apply spacing - more compact
+        style.spacing.item_spacing = egui::vec2(4.0, 4.0);
+        style.spacing.window_margin = egui::Margin::same(8.0);
+        style.spacing.button_padding = egui::vec2(8.0, 4.0);
 
         ctx.set_style(style);
     }

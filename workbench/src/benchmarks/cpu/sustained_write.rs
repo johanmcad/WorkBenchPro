@@ -8,7 +8,6 @@ use rand::Rng;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Sustained write performance benchmark
 /// Simulates build output - writing large amounts of data with periodic fsync
@@ -144,8 +143,6 @@ impl Benchmark for SustainedWriteBenchmark {
             / throughputs.len() as f64;
         let std_dev = variance.sqrt();
 
-        let score = thresholds::sustained_write_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -154,8 +151,6 @@ impl Benchmark for SustainedWriteBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "MB/s".to_string(),
-            score,
-            max_score: 600,
             details: TestDetails {
                 iterations: num_runs as u32,
                 duration_secs: (total_size as f64 * num_runs as f64) / (mean * 1024.0 * 1024.0),

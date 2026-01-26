@@ -5,7 +5,6 @@ use anyhow::Result;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Process spawn time benchmark
 /// Measures time to spawn a simple process 100 times
@@ -119,9 +118,6 @@ impl Benchmark for ProcessSpawnBenchmark {
             / count as f64;
         let std_dev = variance.sqrt();
 
-        // Score based on average spawn time
-        let score = thresholds::process_spawn_score(mean);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -130,8 +126,6 @@ impl Benchmark for ProcessSpawnBenchmark {
             description: self.description().to_string(),
             value: mean,
             unit: "ms".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: count as u32,
                 duration_secs: sum / 1000.0,

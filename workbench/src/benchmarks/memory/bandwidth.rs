@@ -4,7 +4,6 @@ use rayon::prelude::*;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Memory bandwidth benchmark using multi-threaded memory copy
 /// Measures GB/s throughput
@@ -128,8 +127,6 @@ impl Benchmark for MemoryBandwidthBenchmark {
             / bandwidths.len() as f64;
         let std_dev = variance.sqrt();
 
-        let score = thresholds::memory_bandwidth_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -138,8 +135,6 @@ impl Benchmark for MemoryBandwidthBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "GB/s".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: (num_runs * copies_per_run) as u32,
                 duration_secs: sum / mean,

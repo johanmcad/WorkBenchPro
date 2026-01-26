@@ -7,7 +7,6 @@ use anyhow::Result;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// File enumeration benchmark - simulates VS solution load, git status
 pub struct FileEnumerationBenchmark {
@@ -165,9 +164,6 @@ impl Benchmark for FileEnumerationBenchmark {
         // Calculate files per second (using median)
         let files_per_sec = (files_counted as f64 / median) * 1000.0;
 
-        // Calculate score
-        let score = thresholds::file_enumeration_score(files_per_sec);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -176,8 +172,6 @@ impl Benchmark for FileEnumerationBenchmark {
             description: self.description().to_string(),
             value: files_per_sec,
             unit: "files/sec".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: num_runs as u32,
                 duration_secs: sum / 1000.0,

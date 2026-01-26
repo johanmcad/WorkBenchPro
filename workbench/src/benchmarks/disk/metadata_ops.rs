@@ -6,8 +6,7 @@ use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
-use crate::models::{Percentiles, TestDetails, TestResult};
-use crate::scoring::thresholds;
+use crate::models::{TestDetails, TestResult};
 
 /// Metadata operations benchmark - simulates npm install, build temp files
 pub struct MetadataOpsBenchmark {
@@ -126,9 +125,6 @@ impl Benchmark for MetadataOpsBenchmark {
             / ops_per_sec_samples.len() as f64;
         let std_dev = variance.sqrt();
 
-        // Score based on ops/sec
-        let score = thresholds::metadata_ops_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -137,8 +133,6 @@ impl Benchmark for MetadataOpsBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "ops/sec".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: num_runs as u32,
                 duration_secs: sum,

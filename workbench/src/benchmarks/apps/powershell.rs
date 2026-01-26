@@ -233,20 +233,6 @@ impl Benchmark for PowerShellBenchmark {
         // Calculate statistics
         let total_avg: f64 = script_avgs.iter().map(|(_, avg)| avg).sum::<f64>() / script_avgs.len() as f64;
 
-        // Score based on average script execution time
-        // <100ms = 500, <200ms = 400, <500ms = 300, <1000ms = 200, >1000ms = 100
-        let score = if total_avg < 100.0 {
-            500
-        } else if total_avg < 200.0 {
-            400
-        } else if total_avg < 500.0 {
-            300
-        } else if total_avg < 1000.0 {
-            200
-        } else {
-            100
-        };
-
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
@@ -262,8 +248,6 @@ impl Benchmark for PowerShellBenchmark {
             ),
             value: total_avg,
             unit: "ms".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

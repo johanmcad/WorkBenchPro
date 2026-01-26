@@ -145,19 +145,6 @@ impl Benchmark for ProcessesBenchmark {
         let avg_filter = filter_times.iter().sum::<f64>() / filter_times.len() as f64;
         let avg_combined = (avg_list + avg_verbose + avg_filter) / 3.0;
 
-        // Score: faster is better
-        let score = if avg_combined < 50.0 {
-            300
-        } else if avg_combined < 100.0 {
-            250
-        } else if avg_combined < 200.0 {
-            200
-        } else if avg_combined < 500.0 {
-            150
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [list_times, verbose_times, filter_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -176,8 +163,6 @@ impl Benchmark for ProcessesBenchmark {
             ),
             value: avg_combined,
             unit: "ms".to_string(),
-            score,
-            max_score: 300,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

@@ -4,7 +4,6 @@ use rand::seq::SliceRandom;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Memory latency benchmark using pointer-chasing
 /// Measures nanoseconds per random memory access
@@ -121,8 +120,6 @@ impl Benchmark for MemoryLatencyBenchmark {
             / latencies.len() as f64;
         let std_dev = variance.sqrt();
 
-        let score = thresholds::memory_latency_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -131,8 +128,6 @@ impl Benchmark for MemoryLatencyBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "ns".to_string(),
-            score,
-            max_score: 400,
             details: TestDetails {
                 iterations: (num_chases * num_runs) as u32,
                 duration_secs: sum / 1_000_000_000.0 * num_chases as f64,

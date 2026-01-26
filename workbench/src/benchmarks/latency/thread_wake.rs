@@ -7,7 +7,6 @@ use anyhow::Result;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Thread wake latency benchmark
 /// Measures time to wake a sleeping thread 1,000 times
@@ -172,9 +171,6 @@ impl Benchmark for ThreadWakeBenchmark {
             / count as f64;
         let std_dev = variance.sqrt();
 
-        // Score based on mean latency
-        let score = thresholds::thread_wake_score(mean);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -183,8 +179,6 @@ impl Benchmark for ThreadWakeBenchmark {
             description: self.description().to_string(),
             value: mean,
             unit: "us".to_string(),
-            score,
-            max_score: 400,
             details: TestDetails {
                 iterations: count as u32,
                 duration_secs: sum / 1_000_000.0,

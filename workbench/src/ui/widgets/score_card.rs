@@ -1,195 +1,184 @@
 use egui::{Align, Layout, Response, RichText, Ui, Vec2, Widget};
 
-use crate::models::Rating;
-use crate::ui::widgets::ProgressBar;
 use crate::ui::Theme;
 
-/// Score card widget matching 05-ui-design.md spec
-/// - Size: 200x140px
-/// - Border radius: 8px
-/// - Border: 1px #e2e8f0
-/// - Background: white
-/// - Score: 36px bold centered
-/// - Progress bar: 8px height
-/// - Rating badge at bottom
-pub struct ScoreCard<'a> {
+/// Category summary card widget for displaying benchmark category information
+/// Replaces the score-based cards with raw value focused display
+pub struct CategorySummaryCard<'a> {
     title: &'a str,
-    score: u32,
-    max_score: u32,
-    rating: Rating,
+    test_count: usize,
+    summary: &'a str,
 }
 
-impl<'a> ScoreCard<'a> {
-    pub fn new(title: &'a str, score: u32, max_score: u32, rating: Rating) -> Self {
+impl<'a> CategorySummaryCard<'a> {
+    pub fn new(title: &'a str, test_count: usize, summary: &'a str) -> Self {
         Self {
             title,
-            score,
-            max_score,
-            rating,
+            test_count,
+            summary,
         }
     }
 }
 
-impl<'a> Widget for ScoreCard<'a> {
+impl<'a> Widget for CategorySummaryCard<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let percentage = if self.max_score > 0 {
-            self.score as f32 / self.max_score as f32
-        } else {
-            0.0
-        };
-
         egui::Frame::none()
             .fill(Theme::BG_CARD)
             .stroke(egui::Stroke::new(1.0, Theme::BORDER))
             .rounding(Theme::CARD_ROUNDING)
             .inner_margin(12.0)
             .show(ui, |ui| {
-                ui.set_min_size(Vec2::new(Theme::CARD_WIDTH, Theme::CARD_HEIGHT));
-                ui.set_max_width(Theme::CARD_WIDTH);
+                ui.set_min_size(Vec2::new(180.0, 100.0));
+                ui.set_max_width(200.0);
 
                 ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                    // Title
+                    // Category title
                     ui.label(
                         RichText::new(self.title)
-                            .color(Theme::TEXT_SECONDARY)
-                            .size(Theme::SIZE_CAPTION),
-                    );
-
-                    ui.add_space(6.0);
-
-                    // Score
-                    ui.label(
-                        RichText::new(format!("{}", self.score))
-                            .color(Theme::rating_color(&self.rating))
-                            .size(Theme::SIZE_SCORE)
+                            .color(Theme::TEXT_PRIMARY)
+                            .size(Theme::SIZE_BODY)
                             .strong(),
                     );
 
-                    // Max score
+                    ui.add_space(8.0);
+
+                    // Test count
                     ui.label(
-                        RichText::new(format!("/ {}", self.max_score))
+                        RichText::new(format!("{} tests", self.test_count))
+                            .color(Theme::ACCENT)
+                            .size(Theme::SIZE_SECTION)
+                            .strong(),
+                    );
+
+                    ui.add_space(4.0);
+
+                    // Summary (e.g., key metric or status)
+                    ui.label(
+                        RichText::new(self.summary)
                             .color(Theme::TEXT_SECONDARY)
                             .size(Theme::SIZE_CAPTION),
                     );
-
-                    ui.add_space(8.0);
-
-                    // Progress bar (8px height per spec)
-                    ui.add(
-                        ProgressBar::new(percentage)
-                            .rating(self.rating)
-                            .height(Theme::PROGRESS_HEIGHT)
-                            .width(Theme::CARD_WIDTH - 24.0),
-                    );
-
-                    ui.add_space(8.0);
-
-                    // Rating badge (padding: 8px x 4px, border radius: 4px)
-                    egui::Frame::none()
-                        .fill(Theme::rating_bg_color(&self.rating))
-                        .rounding(Theme::BADGE_ROUNDING)
-                        .inner_margin(egui::Margin::symmetric(8.0, 4.0))
-                        .show(ui, |ui| {
-                            ui.label(
-                                RichText::new(self.rating.label())
-                                    .color(Theme::rating_color(&self.rating))
-                                    .size(Theme::SIZE_CAPTION)
-                                    .strong(),
-                            );
-                        });
                 });
             })
             .response
     }
 }
 
-/// Large score card for overall results display
-pub struct LargeScoreCard<'a> {
-    title: &'a str,
-    score: u32,
-    max_score: u32,
-    rating: Rating,
+/// Machine info header card
+pub struct MachineInfoCard<'a> {
+    machine_name: &'a str,
+    timestamp: &'a str,
+    total_tests: usize,
 }
 
-impl<'a> LargeScoreCard<'a> {
-    pub fn new(title: &'a str, score: u32, max_score: u32, rating: Rating) -> Self {
+impl<'a> MachineInfoCard<'a> {
+    pub fn new(machine_name: &'a str, timestamp: &'a str, total_tests: usize) -> Self {
         Self {
-            title,
-            score,
-            max_score,
-            rating,
+            machine_name,
+            timestamp,
+            total_tests,
         }
     }
 }
 
-impl<'a> Widget for LargeScoreCard<'a> {
+impl<'a> Widget for MachineInfoCard<'a> {
     fn ui(self, ui: &mut Ui) -> Response {
-        let percentage = if self.max_score > 0 {
-            self.score as f32 / self.max_score as f32
-        } else {
-            0.0
-        };
-
         egui::Frame::none()
             .fill(Theme::BG_CARD)
             .stroke(egui::Stroke::new(1.0, Theme::BORDER))
             .rounding(Theme::CARD_ROUNDING_LARGE)
-            .inner_margin(24.0)
+            .inner_margin(16.0)
             .show(ui, |ui| {
                 ui.set_min_width(300.0);
 
                 ui.with_layout(Layout::top_down(Align::Center), |ui| {
-                    // Title
+                    // Machine name
                     ui.label(
-                        RichText::new(self.title)
-                            .color(Theme::TEXT_SECONDARY)
-                            .size(Theme::SIZE_SECTION),
-                    );
-
-                    ui.add_space(12.0);
-
-                    // Score (larger for overall)
-                    ui.label(
-                        RichText::new(format!("{}", self.score))
-                            .color(Theme::rating_color(&self.rating))
-                            .size(Theme::SIZE_SCORE_LARGE)
+                        RichText::new(self.machine_name)
+                            .color(Theme::ACCENT)
+                            .size(Theme::SIZE_SECTION)
                             .strong(),
                     );
 
-                    // Max score
+                    ui.add_space(4.0);
+
+                    // Timestamp
                     ui.label(
-                        RichText::new(format!("/ {}", self.max_score))
+                        RichText::new(self.timestamp)
                             .color(Theme::TEXT_SECONDARY)
-                            .size(Theme::SIZE_CARD),
+                            .size(Theme::SIZE_BODY),
                     );
 
-                    ui.add_space(16.0);
+                    ui.add_space(8.0);
 
-                    // Progress bar
-                    ui.add(
-                        ProgressBar::new(percentage)
-                            .rating(self.rating)
-                            .height(12.0)
-                            .width(260.0),
-                    );
-
-                    ui.add_space(16.0);
-
-                    // Rating badge (larger)
+                    // Total tests completed badge
                     egui::Frame::none()
-                        .fill(Theme::rating_bg_color(&self.rating))
-                        .rounding(6.0)
-                        .inner_margin(egui::Margin::symmetric(16.0, 8.0))
+                        .fill(Theme::BG_SECONDARY)
+                        .rounding(4.0)
+                        .inner_margin(egui::Margin::symmetric(10.0, 4.0))
                         .show(ui, |ui| {
                             ui.label(
-                                RichText::new(self.rating.label())
-                                    .color(Theme::rating_color(&self.rating))
-                                    .size(Theme::SIZE_CARD)
-                                    .strong(),
+                                RichText::new(format!("{} tests completed", self.total_tests))
+                                    .color(Theme::TEXT_PRIMARY)
+                                    .size(Theme::SIZE_BODY),
                             );
                         });
                 });
             })
             .response
+    }
+}
+
+/// Compact test result row for displaying individual benchmark results
+pub struct TestResultRow<'a> {
+    name: &'a str,
+    value: f64,
+    unit: &'a str,
+}
+
+impl<'a> TestResultRow<'a> {
+    pub fn new(name: &'a str, value: f64, unit: &'a str) -> Self {
+        Self { name, value, unit }
+    }
+}
+
+impl<'a> Widget for TestResultRow<'a> {
+    fn ui(self, ui: &mut Ui) -> Response {
+        ui.horizontal(|ui| {
+            // Test name (left-aligned)
+            ui.with_layout(Layout::left_to_right(Align::Center), |ui| {
+                ui.label(
+                    RichText::new(self.name)
+                        .color(Theme::TEXT_PRIMARY)
+                        .size(Theme::SIZE_BODY),
+                );
+            });
+
+            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                // Unit
+                ui.label(
+                    RichText::new(self.unit)
+                        .color(Theme::TEXT_SECONDARY)
+                        .size(Theme::SIZE_CAPTION),
+                );
+
+                // Value (formatted appropriately)
+                let value_str = if self.value >= 1000.0 {
+                    format!("{:.0}", self.value)
+                } else if self.value >= 1.0 {
+                    format!("{:.2}", self.value)
+                } else {
+                    format!("{:.3}", self.value)
+                };
+
+                ui.label(
+                    RichText::new(value_str)
+                        .color(Theme::ACCENT)
+                        .size(Theme::SIZE_BODY)
+                        .strong(),
+                );
+            });
+        })
+        .response
     }
 }

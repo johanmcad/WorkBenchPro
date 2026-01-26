@@ -6,7 +6,6 @@ use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::models::{BenchmarkRun, CategoryResults, TestResult};
-use crate::scoring::ScoreCalculator;
 
 use super::SystemInfoCollector;
 
@@ -31,25 +30,9 @@ pub enum BenchmarkMessage {
 }
 
 /// Configuration for a benchmark run
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct RunConfig {
-    pub run_project_operations: bool,
-    pub run_build_performance: bool,
-    pub run_responsiveness: bool,
-    pub run_graphics: bool,
     pub machine_name: String,
-}
-
-impl Default for RunConfig {
-    fn default() -> Self {
-        Self {
-            run_project_operations: true,
-            run_build_performance: true,
-            run_responsiveness: true,
-            run_graphics: false,
-            machine_name: String::new(),
-        }
-    }
 }
 
 /// Runs benchmarks in a background thread
@@ -120,17 +103,6 @@ impl BenchmarkRunner {
         let mut run = BenchmarkRun::new(machine_name, system_info);
         let mut results = CategoryResults::default();
 
-        // Filter benchmarks by config
-        let benchmarks: Vec<_> = benchmarks
-            .into_iter()
-            .filter(|b| match b.category() {
-                Category::ProjectOperations => config.run_project_operations,
-                Category::BuildPerformance => config.run_build_performance,
-                Category::Responsiveness => config.run_responsiveness,
-                Category::Graphics => config.run_graphics,
-            })
-            .collect();
-
         let total = benchmarks.len();
 
         for (idx, benchmark) in benchmarks.into_iter().enumerate() {
@@ -167,12 +139,6 @@ impl BenchmarkRunner {
                         Category::Responsiveness => {
                             results.responsiveness.push(result.clone());
                         }
-                        Category::Graphics => {
-                            if results.graphics.is_none() {
-                                results.graphics = Some(Vec::new());
-                            }
-                            results.graphics.as_mut().unwrap().push(result.clone());
-                        }
                     }
 
                     let _ = tx.send(BenchmarkMessage::TestComplete { result });
@@ -185,9 +151,7 @@ impl BenchmarkRunner {
             }
         }
 
-        // Calculate scores
         run.results = results;
-        run.scores = ScoreCalculator::calculate(&run.results);
 
         let _ = tx.send(BenchmarkMessage::AllComplete { run: Box::new(run) });
     }

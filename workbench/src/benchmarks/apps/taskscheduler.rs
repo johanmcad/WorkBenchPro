@@ -136,20 +136,6 @@ impl Benchmark for TaskSchedulerBenchmark {
         let avg_verbose = verbose_times.iter().sum::<f64>() / verbose_times.len() as f64;
         let avg_combined = (avg_list + avg_query + avg_verbose) / 3.0;
 
-        // Score: faster is better
-        // <100ms = 300, <200ms = 250, <500ms = 200, <1000ms = 150, >1000ms = 100
-        let score = if avg_combined < 100.0 {
-            300
-        } else if avg_combined < 200.0 {
-            250
-        } else if avg_combined < 500.0 {
-            200
-        } else if avg_combined < 1000.0 {
-            150
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [list_times, query_times, verbose_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -168,8 +154,6 @@ impl Benchmark for TaskSchedulerBenchmark {
             ),
             value: avg_combined,
             unit: "ms".to_string(),
-            score,
-            max_score: 300,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

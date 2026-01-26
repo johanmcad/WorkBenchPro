@@ -26,6 +26,19 @@ impl AppLaunchBenchmark {
         let _ = fs::remove_dir_all(&self.test_dir);
     }
 
+    /// Kill any Calculator instances (UWP app needs special handling)
+    #[cfg(windows)]
+    fn kill_calculator() {
+        // Windows 10+ Calculator is a UWP app
+        let _ = Command::new("taskkill").args(["/F", "/IM", "CalculatorApp.exe"]).output();
+        let _ = Command::new("taskkill").args(["/F", "/IM", "calc.exe"]).output();
+    }
+
+    #[cfg(not(windows))]
+    fn kill_calculator() {
+        // No-op on non-Windows
+    }
+
     /// Check if we're on Windows
     fn is_windows() -> bool {
         cfg!(target_os = "windows")
@@ -121,14 +134,12 @@ impl Benchmark for AppLaunchBenchmark {
 
                 if is_windows {
                     // On Windows, launch app and immediately close it
-                    // For GUI apps, we use start /wait with timeout
                     let cmd_name = args[0];
 
                     // Special handling for different apps
                     match *app_name {
                         "notepad" | "wordpad" | "mspaint" => {
                             // Launch and kill after a brief moment
-                            // Use taskkill to terminate the process
                             let mut child = Command::new(cmd_name)
                                 .arg(test_file.to_str().unwrap_or(""))
                                 .spawn();
@@ -138,16 +149,23 @@ impl Benchmark for AppLaunchBenchmark {
                                 std::thread::sleep(Duration::from_millis(100));
                                 let _ = c.kill();
                                 let _ = c.wait();
+                                // Also use taskkill as fallback to ensure process is terminated
+                                let _ = Command::new("taskkill")
+                                    .args(["/F", "/IM", cmd_name])
+                                    .output();
                             }
                         }
                         "calc" => {
-                            // Calculator - launch and kill
+                            // Calculator on Windows 10+ is a UWP app (CalculatorApp.exe)
+                            // The calc.exe just launches it and exits
                             let mut child = Command::new(cmd_name).spawn();
                             if let Ok(ref mut c) = child {
                                 std::thread::sleep(Duration::from_millis(100));
                                 let _ = c.kill();
                                 let _ = c.wait();
                             }
+                            // Kill the actual Calculator UWP app
+                            Self::kill_calculator();
                         }
                         "cmd" => {
                             // Command prompt with echo - runs and exits
@@ -184,20 +202,6 @@ impl Benchmark for AppLaunchBenchmark {
         // Calculate statistics
         let total_avg = app_results.iter().map(|(_, t)| t).sum::<f64>() / app_results.len() as f64;
 
-        // Score: faster is better
-        // <50ms = 350, <100ms = 300, <200ms = 250, <500ms = 200, >500ms = 100
-        let score = if total_avg < 50.0 {
-            350
-        } else if total_avg < 100.0 {
-            300
-        } else if total_avg < 200.0 {
-            250
-        } else if total_avg < 500.0 {
-            200
-        } else {
-            100
-        };
-
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
 
@@ -220,8 +224,6 @@ impl Benchmark for AppLaunchBenchmark {
             ),
             value: total_avg,
             unit: "ms".to_string(),
-            score,
-            max_score: 350,
             details: TestDetails {
                 iterations: all_times.len() as u32,
                 duration_secs: all_times.iter().sum::<f64>() / 1000.0,

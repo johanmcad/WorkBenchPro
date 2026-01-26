@@ -9,7 +9,6 @@ use rayon::prelude::*;
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
-use crate::scoring::thresholds;
 
 /// Multi-thread compute benchmark using LZ4 compression across all cores
 /// Simulates parallel build
@@ -129,8 +128,6 @@ impl Benchmark for MultiThreadBenchmark {
             / throughputs.len() as f64;
         let std_dev = variance.sqrt();
 
-        let score = thresholds::multi_thread_score(median);
-
         progress.update(1.0, "Complete");
 
         Ok(TestResult {
@@ -139,8 +136,6 @@ impl Benchmark for MultiThreadBenchmark {
             description: self.description().to_string(),
             value: median,
             unit: "MB/s".to_string(),
-            score,
-            max_score: 600,
             details: TestDetails {
                 iterations: (total_chunks * num_runs) as u32,
                 duration_secs: sum / mean,

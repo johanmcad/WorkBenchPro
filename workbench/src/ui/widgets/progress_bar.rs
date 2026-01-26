@@ -1,18 +1,17 @@
-use egui::{Rect, Response, Sense, Ui, Vec2, Widget};
+use egui::{Color32, Rect, Response, Sense, Ui, Vec2, Widget};
 
-use crate::models::Rating;
 use crate::ui::Theme;
 
 /// Custom progress bar widget matching 05-ui-design.md spec
 /// - Height: 8px (large) or 6px (small)
 /// - Border radius: 4px
 /// - Background: #e2e8f0
-/// - Fill: rating color
+/// - Fill: custom color or accent
 pub struct ProgressBar {
     progress: f32,
     height: f32,
     width: Option<f32>,
-    rating: Option<Rating>,
+    color: Option<Color32>,
 }
 
 impl ProgressBar {
@@ -21,7 +20,7 @@ impl ProgressBar {
             progress: progress.clamp(0.0, 1.0),
             height: Theme::PROGRESS_HEIGHT,
             width: None,
-            rating: None,
+            color: None,
         }
     }
 
@@ -40,8 +39,8 @@ impl ProgressBar {
         self
     }
 
-    pub fn rating(mut self, rating: Rating) -> Self {
-        self.rating = Some(rating);
+    pub fn color(mut self, color: Color32) -> Self {
+        self.color = Some(color);
         self
     }
 }
@@ -64,10 +63,7 @@ impl Widget for ProgressBar {
                 let fill_width = rect.width() * self.progress;
                 let fill_rect = Rect::from_min_size(rect.min, Vec2::new(fill_width, self.height));
 
-                let fill_color = self
-                    .rating
-                    .map(|r| Theme::rating_color(&r))
-                    .unwrap_or(Theme::ACCENT);
+                let fill_color = self.color.unwrap_or(Theme::ACCENT);
 
                 painter.rect_filled(fill_rect, rounding, fill_color);
             }

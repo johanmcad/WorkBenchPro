@@ -16,7 +16,7 @@ export default function Footer() {
 
           <div className="flex items-center gap-6">
             <a
-              href="https://github.com/YOUR_USERNAME/workbench"
+              href="https://github.com/johanmcad/workbench"
               target="_blank"
               rel="noopener noreferrer"
               className="text-wb-text-secondary hover:text-white transition-colors"

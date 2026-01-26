@@ -196,20 +196,6 @@ impl Benchmark for ArchiveOpsBenchmark {
         let avg_extract = extract_times.iter().sum::<f64>() / extract_times.len() as f64;
         let avg_total = avg_compress + avg_extract;
 
-        // Score based on total time
-        // <1s = 500, <2s = 400, <5s = 300, <10s = 200, >10s = 100
-        let score = if avg_total < 1.0 {
-            500
-        } else if avg_total < 2.0 {
-            400
-        } else if avg_total < 5.0 {
-            300
-        } else if avg_total < 10.0 {
-            200
-        } else {
-            100
-        };
-
         let all_times: Vec<f64> = [compress_times, extract_times].concat();
         let min = all_times.iter().cloned().fold(f64::INFINITY, f64::min);
         let max = all_times.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
@@ -227,8 +213,6 @@ impl Benchmark for ArchiveOpsBenchmark {
             ),
             value: avg_total,
             unit: "s".to_string(),
-            score,
-            max_score: 500,
             details: TestDetails {
                 iterations: 10,
                 duration_secs: all_times.iter().sum(),

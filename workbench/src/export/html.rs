@@ -17,6 +17,33 @@ impl HtmlExporter {
     }
 
     fn generate_html(run: &BenchmarkRun) -> String {
+        // Count total tests
+        let total_tests = run.results.project_operations.len()
+            + run.results.build_performance.len()
+            + run.results.responsiveness.len();
+
+        // Generate results table rows
+        let mut results_html = String::new();
+
+        for result in &run.results.project_operations {
+            results_html.push_str(&format!(
+                "<tr><td>Project Operations</td><td>{}</td><td>{:.2} {}</td></tr>\n",
+                result.name, result.value, result.unit
+            ));
+        }
+        for result in &run.results.build_performance {
+            results_html.push_str(&format!(
+                "<tr><td>Build Performance</td><td>{}</td><td>{:.2} {}</td></tr>\n",
+                result.name, result.value, result.unit
+            ));
+        }
+        for result in &run.results.responsiveness {
+            results_html.push_str(&format!(
+                "<tr><td>Responsiveness</td><td>{}</td><td>{:.2} {}</td></tr>\n",
+                result.name, result.value, result.unit
+            ));
+        }
+
         format!(
             r#"<!DOCTYPE html>
 <html lang="en">
@@ -34,7 +61,7 @@ impl HtmlExporter {
             color: #1e293b;
         }}
         h1 {{ color: #0f3460; }}
-        .score-card {{
+        .summary-card {{
             background: white;
             border-radius: 8px;
             padding: 20px;
@@ -44,18 +71,7 @@ impl HtmlExporter {
             min-width: 200px;
             text-align: center;
         }}
-        .score {{ font-size: 48px; font-weight: bold; }}
-        .rating {{
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 4px;
-            font-weight: 500;
-        }}
-        .excellent {{ background: #d1fae5; color: #065f46; }}
-        .good {{ background: #dbeafe; color: #1e40af; }}
-        .acceptable {{ background: #fef3c7; color: #92400e; }}
-        .poor {{ background: #fee2e2; color: #991b1b; }}
-        .inadequate {{ background: #fecaca; color: #7f1d1d; }}
+        .test-count {{ font-size: 48px; font-weight: bold; color: #0f3460; }}
         .system-info {{
             background: white;
             border-radius: 8px;
@@ -71,16 +87,25 @@ impl HtmlExporter {
             text-align: left;
             border-bottom: 1px solid #e2e8f0;
         }}
+        th {{
+            background: #f1f5f9;
+            font-weight: 600;
+        }}
+        .results-section {{
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }}
     </style>
 </head>
 <body>
     <h1>WorkBench Report</h1>
     <p>Machine: {machine_name} | Date: {timestamp}</p>
 
-    <div class="score-card">
-        <div class="score">{overall_score}</div>
-        <div>/ {overall_max}</div>
-        <div class="rating {rating_class}">{rating}</div>
+    <div class="summary-card">
+        <div class="test-count">{total_tests}</div>
+        <div>Tests Completed</div>
     </div>
 
     <div class="system-info">
@@ -93,22 +118,33 @@ impl HtmlExporter {
         </table>
     </div>
 
-    <h2>Results</h2>
-    <p>Full results exported to JSON for detailed analysis.</p>
+    <div class="results-section">
+        <h2>Benchmark Results</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Test</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+                {results_html}
+            </tbody>
+        </table>
+    </div>
 </body>
 </html>"#,
             machine_name = run.machine_name,
             timestamp = run.timestamp.format("%Y-%m-%d %H:%M:%S"),
-            overall_score = run.scores.overall,
-            overall_max = run.scores.overall_max,
-            rating = run.scores.rating.label(),
-            rating_class = run.scores.rating.label().to_lowercase(),
+            total_tests = total_tests,
             cpu_name = run.system_info.cpu.name,
             cores = run.system_info.cpu.cores,
             threads = run.system_info.cpu.threads,
             memory_gb = run.system_info.memory.total_gb(),
             os_name = run.system_info.os.name,
             os_version = run.system_info.os.version,
+            results_html = results_html,
         )
     }
 }

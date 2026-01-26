@@ -1,10 +1,9 @@
 mod applaunch;
 mod archive_ops;
-mod cargo_build;
+mod csharp_compile;
 mod defender;
 mod environment;
 mod eventlog;
-mod git_ops;
 mod network;
 mod powershell;
 mod processes;
@@ -18,11 +17,10 @@ mod wmic;
 
 pub use applaunch::AppLaunchBenchmark;
 pub use archive_ops::ArchiveOpsBenchmark;
-pub use cargo_build::CargoBuildBenchmark;
+pub use csharp_compile::CSharpCompileBenchmark;
 pub use defender::DefenderImpactBenchmark;
 pub use environment::EnvironmentBenchmark;
 pub use eventlog::EventLogBenchmark;
-pub use git_ops::GitOperationsBenchmark;
 pub use network::NetworkBenchmark;
 pub use powershell::PowerShellBenchmark;
 pub use processes::ProcessesBenchmark;
