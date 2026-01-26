@@ -21,14 +21,12 @@ use crate::benchmarks::latency::{
 };
 use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
 use crate::benchmarks::Benchmark;
-use crate::cloud::{BrowseFilter, CloudClient, CommunityRun, PercentileRank, TestStatistics};
+use crate::cloud::CloudClient;
 use crate::core::{BenchmarkMessage, BenchmarkRunner, SystemInfoCollector};
-use crate::export::JsonExporter;
 use crate::models::{BenchmarkRun, SystemInfo};
 use crate::storage::HistoryStorage;
 use crate::ui::views::{
-    CommunityAction, CommunityComparisonAction, CommunityComparisonView, CommunityFilters,
-    CommunityView, ComparisonView, HistoryAction, HistoryView, HomeAction, HomeView,
+    HistoryAction, HistoryView, HomeAction, HomeView,
     ResultsAction, ResultsView, RunningView,
 };
 use crate::ui::Theme;
@@ -51,11 +49,7 @@ enum AppState {
     Running,
     Results,
     History,
-    Comparison(usize, usize),        // Indices of runs to compare
     ViewingHistoricRun(usize),       // Index of run to view
-    CommunityBrowser(Option<usize>), // Browsing community, optional local run index for comparison
-    OnlineComparison(usize, String), // Local run index, remote run ID
-    CommunityComparison(usize),      // Community comparison for run at index
 }
 
 /// Main application
@@ -78,15 +72,9 @@ pub struct WorkBenchProApp {
     // History
     history_storage: HistoryStorage,
     history_runs: Vec<BenchmarkRun>,
-    history_selected: Vec<bool>,
 
     // Cloud/Community
     cloud_client: CloudClient,
-    community_runs: Vec<CommunityRun>,
-    community_filters: CommunityFilters,
-    community_loading: bool,
-    community_error: Option<String>,
-    fetched_remote_run: Option<BenchmarkRun>,
 
     // Upload dialog state
     show_upload_dialog: bool,
@@ -101,12 +89,6 @@ pub struct WorkBenchProApp {
     remove_upload_password: String,
     remove_upload_error: Option<String>,
     remove_upload_run_index: Option<usize>,
-
-    // Community comparison state
-    community_statistics: Vec<TestStatistics>,
-    community_percentile_ranks: Vec<PercentileRank>,
-    comparison_loading: bool,
-    comparison_error: Option<String>,
 }
 
 impl WorkBenchProApp {
@@ -121,7 +103,6 @@ impl WorkBenchProApp {
         // Load history
         let history_storage = HistoryStorage::new();
         let history_runs = history_storage.load_all().unwrap_or_default();
-        let history_selected = vec![false; history_runs.len()];
 
         Self {
             state: AppState::Home,
@@ -136,14 +117,8 @@ impl WorkBenchProApp {
             last_run: None,
             history_storage,
             history_runs,
-            history_selected,
             // Cloud state
             cloud_client: CloudClient::new(),
-            community_runs: Vec::new(),
-            community_filters: CommunityFilters::default(),
-            community_loading: false,
-            community_error: None,
-            fetched_remote_run: None,
             // Upload dialog
             show_upload_dialog: false,
             upload_display_name: machine_name,
@@ -157,12 +132,6 @@ impl WorkBenchProApp {
             remove_upload_password: String::new(),
             remove_upload_error: None,
             remove_upload_run_index: None,
-
-            // Community comparison
-            community_statistics: Vec::new(),
-            community_percentile_ranks: Vec::new(),
-            comparison_loading: false,
-            comparison_error: None,
         }
     }
 
@@ -280,25 +249,6 @@ impl WorkBenchProApp {
 
     fn reload_history(&mut self) {
         self.history_runs = self.history_storage.load_all().unwrap_or_default();
-        self.history_selected = vec![false; self.history_runs.len()];
-    }
-
-    fn export_results(&self) {
-        if let Some(run) = &self.last_run {
-            let path = std::env::temp_dir().join(format!(
-                "workbench_pro_results_{}.json",
-                run.timestamp.format("%Y%m%d_%H%M%S")
-            ));
-
-            match JsonExporter::export(run, &path) {
-                Ok(()) => {
-                    tracing::info!("Results exported to {:?}", path);
-                }
-                Err(e) => {
-                    tracing::error!("Failed to export results: {}", e);
-                }
-            }
-        }
     }
 
     fn delete_history_run(&mut self, idx: usize) {
@@ -361,90 +311,6 @@ impl WorkBenchProApp {
         }
     }
 
-    fn browse_community(&mut self) {
-        self.community_loading = true;
-        self.community_error = None;
-
-        let filter = BrowseFilter::new()
-            .with_limit(50);
-
-        // Apply filters if set
-        let filter = if !self.community_filters.cpu_filter.trim().is_empty() {
-            filter.with_cpu(&self.community_filters.cpu_filter)
-        } else {
-            filter
-        };
-
-        let filter = if !self.community_filters.os_filter.trim().is_empty() {
-            filter.with_os(&self.community_filters.os_filter)
-        } else {
-            filter
-        };
-
-        let filter = if !self.community_filters.min_memory.trim().is_empty() {
-            if let Ok(mem) = self.community_filters.min_memory.parse::<f64>() {
-                filter.with_min_memory(mem)
-            } else {
-                filter
-            }
-        } else {
-            filter
-        };
-
-        match self.cloud_client.browse(&filter) {
-            Ok(runs) => {
-                self.community_runs = runs;
-                self.community_loading = false;
-            }
-            Err(e) => {
-                self.community_error = Some(e.to_string());
-                self.community_loading = false;
-            }
-        }
-    }
-
-    fn fetch_remote_run(&mut self, id: &str) -> bool {
-        match self.cloud_client.fetch(id) {
-            Ok(run) => {
-                self.fetched_remote_run = Some(run);
-                true
-            }
-            Err(e) => {
-                tracing::error!("Failed to fetch remote run: {}", e);
-                false
-            }
-        }
-    }
-
-    fn fetch_community_comparison(&mut self, run_id: &str) {
-        self.comparison_loading = true;
-        self.comparison_error = None;
-
-        // Fetch statistics
-        match self.cloud_client.fetch_statistics() {
-            Ok(stats) => {
-                self.community_statistics = stats;
-            }
-            Err(e) => {
-                self.comparison_error = Some(format!("Failed to fetch statistics: {}", e));
-                self.comparison_loading = false;
-                return;
-            }
-        }
-
-        // Fetch percentile ranks
-        match self.cloud_client.fetch_percentile_rank(run_id) {
-            Ok(ranks) => {
-                self.community_percentile_ranks = ranks;
-                self.comparison_loading = false;
-            }
-            Err(e) => {
-                self.comparison_error = Some(format!("Failed to fetch percentile ranks: {}", e));
-                self.comparison_loading = false;
-            }
-        }
-    }
-
     fn upload_run(&mut self, run: &BenchmarkRun) {
         self.upload_in_progress = true;
         self.upload_error = None;
@@ -498,11 +364,7 @@ impl eframe::App for WorkBenchProApp {
         let mut action_cancel = false;
         let mut results_action = ResultsAction::None;
         let mut history_action = HistoryAction::None;
-        let mut comparison_back = false;
         let mut historic_view_back = false;
-        let mut community_action = CommunityAction::None;
-        let mut online_comparison_back = false;
-        let mut community_comparison_action = CommunityComparisonAction::None;
 
         egui::CentralPanel::default().show(ctx, |ui| {
             match &self.state {
@@ -525,55 +387,12 @@ impl eframe::App for WorkBenchProApp {
                     }
                 }
                 AppState::History => {
-                    history_action =
-                        HistoryView::show(ui, &self.history_runs, &mut self.history_selected);
-                }
-                AppState::Comparison(idx_a, idx_b) => {
-                    if let (Some(run_a), Some(run_b)) = (
-                        self.history_runs.get(*idx_a),
-                        self.history_runs.get(*idx_b),
-                    ) {
-                        comparison_back = ComparisonView::show(ui, run_a, run_b);
-                    }
+                    history_action = HistoryView::show(ui, &self.history_runs);
                 }
                 AppState::ViewingHistoricRun(idx) => {
                     if let Some(run) = self.history_runs.get(*idx) {
-                        let (back, _export) = ResultsView::show(ui, run);
-                        historic_view_back = back;
+                        historic_view_back = ResultsView::show(ui, run);
                     }
-                }
-                AppState::CommunityBrowser(_local_idx) => {
-                    community_action = CommunityView::show(
-                        ui,
-                        &self.community_runs,
-                        &mut self.community_filters,
-                        self.community_loading,
-                        self.community_error.as_deref(),
-                    );
-                }
-                AppState::OnlineComparison(local_idx, _remote_id) => {
-                    if let (Some(local_run), Some(remote_run)) = (
-                        self.history_runs.get(*local_idx),
-                        self.fetched_remote_run.as_ref(),
-                    ) {
-                        online_comparison_back = ComparisonView::show(ui, local_run, remote_run);
-                    }
-                }
-                AppState::CommunityComparison(idx) => {
-                    let run_name = self
-                        .history_runs
-                        .get(*idx)
-                        .map(|r| r.machine_name.as_str())
-                        .unwrap_or("Unknown");
-
-                    community_comparison_action = CommunityComparisonView::show(
-                        ui,
-                        &self.community_statistics,
-                        &self.community_percentile_ranks,
-                        self.comparison_loading,
-                        self.comparison_error.as_deref(),
-                        run_name,
-                    );
                 }
             }
         });
@@ -794,30 +613,9 @@ impl eframe::App for WorkBenchProApp {
             ResultsAction::Back => {
                 self.state = AppState::Home;
             }
-            ResultsAction::Export => {
-                self.export_results();
-            }
             ResultsAction::History => {
                 self.reload_history();
                 self.state = AppState::History;
-            }
-            ResultsAction::CompareOnline => {
-                // Find the last_run in history and use that index
-                if let Some(ref last) = self.last_run {
-                    let idx = self.history_runs.iter().position(|r| r.id == last.id).unwrap_or(0);
-                    self.state = AppState::CommunityBrowser(Some(idx));
-                    self.browse_community();
-                }
-            }
-            ResultsAction::CommunityComparison => {
-                // Find the last_run in history and use that for community comparison
-                if let Some(ref last) = self.last_run {
-                    if let Some(remote_id) = last.remote_id.clone() {
-                        let idx = self.history_runs.iter().position(|r| r.id == last.id).unwrap_or(0);
-                        self.state = AppState::CommunityComparison(idx);
-                        self.fetch_community_comparison(&remote_id);
-                    }
-                }
             }
             ResultsAction::Upload => {
                 self.upload_run_index = None; // Upload last_run
@@ -825,14 +623,8 @@ impl eframe::App for WorkBenchProApp {
                 self.show_upload_dialog = true;
             }
         }
-        if comparison_back || historic_view_back {
+        if historic_view_back {
             self.state = AppState::History;
-        }
-        if online_comparison_back {
-            // Go back to community browser with the same local run
-            if let AppState::OnlineComparison(local_idx, _) = self.state.clone() {
-                self.state = AppState::CommunityBrowser(Some(local_idx));
-            }
         }
 
         // Handle history actions
@@ -844,19 +636,6 @@ impl eframe::App for WorkBenchProApp {
             HistoryAction::ViewRun(idx) => {
                 self.state = AppState::ViewingHistoricRun(idx);
             }
-            HistoryAction::CompareRuns(idx_a, idx_b) => {
-                self.state = AppState::Comparison(idx_a, idx_b);
-            }
-            HistoryAction::CompareOnline(idx) => {
-                self.state = AppState::CommunityBrowser(Some(idx));
-                self.browse_community();
-            }
-            HistoryAction::CommunityComparison(idx) => {
-                if let Some(remote_id) = self.history_runs.get(idx).and_then(|r| r.remote_id.clone()) {
-                    self.state = AppState::CommunityComparison(idx);
-                    self.fetch_community_comparison(&remote_id);
-                }
-            }
             HistoryAction::Upload(idx) => {
                 self.upload_run_index = Some(idx);
                 self.upload_display_name = self.system_info.hostname.clone();
@@ -867,40 +646,6 @@ impl eframe::App for WorkBenchProApp {
             }
             HistoryAction::DeleteRun(idx) => {
                 self.delete_history_run(idx);
-            }
-        }
-
-        // Handle community actions
-        match community_action {
-            CommunityAction::None => {}
-            CommunityAction::Back => {
-                self.state = AppState::History;
-            }
-            CommunityAction::SelectForComparison(remote_id) => {
-                if let AppState::CommunityBrowser(Some(local_idx)) = self.state {
-                    // Fetch the remote run and transition to comparison
-                    if self.fetch_remote_run(&remote_id) {
-                        self.state = AppState::OnlineComparison(local_idx, remote_id);
-                    }
-                }
-            }
-            CommunityAction::Refresh | CommunityAction::FilterChanged => {
-                self.browse_community();
-            }
-        }
-
-        // Handle community comparison actions
-        match community_comparison_action {
-            CommunityComparisonAction::None => {}
-            CommunityComparisonAction::Back => {
-                self.state = AppState::History;
-            }
-            CommunityComparisonAction::Refresh => {
-                if let AppState::CommunityComparison(idx) = self.state {
-                    if let Some(remote_id) = self.history_runs.get(idx).and_then(|r| r.remote_id.clone()) {
-                        self.fetch_community_comparison(&remote_id);
-                    }
-                }
             }
         }
     }

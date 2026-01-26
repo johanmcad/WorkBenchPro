@@ -8,10 +8,7 @@ use crate::ui::Theme;
 pub enum ResultsAction {
     None,
     Back,
-    Export,
     History,
-    CompareOnline,
-    CommunityComparison,
     Upload,
 }
 
@@ -24,10 +21,9 @@ pub enum ResultsAction {
 pub struct ResultsView;
 
 impl ResultsView {
-    /// Returns (back_clicked, export_clicked)
-    pub fn show(ui: &mut Ui, run: &BenchmarkRun) -> (bool, bool) {
+    /// Returns back_clicked
+    pub fn show(ui: &mut Ui, run: &BenchmarkRun) -> bool {
         let mut back_clicked = false;
-        let mut export_clicked = false;
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
@@ -116,35 +112,21 @@ impl ResultsView {
                 ui.add_space(16.0);
 
                 // Action Buttons
-                ui.horizontal(|ui| {
-                    let back_btn = egui::Button::new(
-                        RichText::new("Back to Home").size(Theme::SIZE_BODY),
-                    )
-                    .min_size(egui::vec2(100.0, 32.0))
-                    .rounding(Theme::CARD_ROUNDING);
+                let back_btn = egui::Button::new(
+                    RichText::new("Back to Home").size(Theme::SIZE_BODY),
+                )
+                .min_size(egui::vec2(100.0, 32.0))
+                .rounding(Theme::CARD_ROUNDING);
 
-                    if ui.add(back_btn).clicked() {
-                        back_clicked = true;
-                    }
-
-                    ui.add_space(8.0);
-
-                    let export_btn = egui::Button::new(
-                        RichText::new("Export JSON").size(Theme::SIZE_BODY),
-                    )
-                    .min_size(egui::vec2(100.0, 32.0))
-                    .rounding(Theme::CARD_ROUNDING);
-
-                    if ui.add(export_btn).clicked() {
-                        export_clicked = true;
-                    }
-                });
+                if ui.add(back_btn).clicked() {
+                    back_clicked = true;
+                }
 
                 ui.add_space(12.0);
             });
         });
 
-        (back_clicked, export_clicked)
+        back_clicked
     }
 
     /// Returns ResultsAction for the main results view with online features
@@ -246,7 +228,7 @@ impl ResultsView {
 
                 ui.add_space(16.0);
 
-                // Action Buttons - Row 1: Navigation
+                // Action Buttons
                 ui.horizontal(|ui| {
                     let back_btn = egui::Button::new(
                         RichText::new("Back to Home").size(Theme::SIZE_BODY),
@@ -260,18 +242,6 @@ impl ResultsView {
 
                     ui.add_space(6.0);
 
-                    let export_btn = egui::Button::new(
-                        RichText::new("Export JSON").size(Theme::SIZE_BODY),
-                    )
-                    .min_size(egui::vec2(100.0, 32.0))
-                    .rounding(Theme::CARD_ROUNDING);
-
-                    if ui.add(export_btn).clicked() {
-                        action = ResultsAction::Export;
-                    }
-
-                    ui.add_space(6.0);
-
                     let history_btn = egui::Button::new(
                         RichText::new("View History").size(Theme::SIZE_BODY),
                     )
@@ -281,52 +251,31 @@ impl ResultsView {
                     if ui.add(history_btn).clicked() {
                         action = ResultsAction::History;
                     }
-                });
-
-                ui.add_space(8.0);
-
-                // Action Buttons - Row 2: Online features
-                ui.horizontal(|ui| {
-                    let compare_btn = egui::Button::new(
-                        RichText::new("Compare Online")
-                            .size(Theme::SIZE_BODY)
-                            .color(egui::Color32::WHITE),
-                    )
-                    .min_size(egui::vec2(120.0, 32.0))
-                    .fill(Theme::ACCENT)
-                    .rounding(Theme::CARD_ROUNDING);
-
-                    if ui.add(compare_btn).clicked() {
-                        action = ResultsAction::CompareOnline;
-                    }
 
                     ui.add_space(6.0);
 
                     // Only show upload if not already uploaded
                     if run.uploaded_at.is_none() {
                         let upload_btn = egui::Button::new(
-                            RichText::new("Upload to Community").size(Theme::SIZE_BODY),
+                            RichText::new("Upload to Community")
+                                .size(Theme::SIZE_BODY)
+                                .color(egui::Color32::WHITE),
                         )
                         .min_size(egui::vec2(140.0, 32.0))
+                        .fill(Theme::SUCCESS)
                         .rounding(Theme::CARD_ROUNDING);
 
                         if ui.add(upload_btn).clicked() {
                             action = ResultsAction::Upload;
                         }
                     } else {
-                        // Show Community Stats button for uploaded runs
-                        let stats_btn = egui::Button::new(
-                            RichText::new("Community Stats")
+                        // Show View Online link for uploaded runs
+                        ui.hyperlink_to(
+                            RichText::new("View Online")
                                 .size(Theme::SIZE_BODY)
-                                .color(egui::Color32::WHITE),
-                        )
-                        .min_size(egui::vec2(120.0, 32.0))
-                        .fill(Theme::SUCCESS)
-                        .rounding(Theme::CARD_ROUNDING);
-
-                        if ui.add(stats_btn).clicked() {
-                            action = ResultsAction::CommunityComparison;
-                        }
+                                .color(Theme::ACCENT),
+                            "https://workbench-pro-iota.vercel.app/results",
+                        );
                     }
                 });
 

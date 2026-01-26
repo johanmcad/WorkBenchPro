@@ -8,9 +8,6 @@ pub enum HistoryAction {
     None,
     Back,
     ViewRun(usize),
-    CompareRuns(usize, usize),
-    CompareOnline(usize),       // Compare run at index against community
-    CommunityComparison(usize), // View community comparison for run at index
     Upload(usize),              // Upload run at index to community
     RemoveUpload(usize),        // Remove uploaded run from community
     DeleteRun(usize),
@@ -22,7 +19,6 @@ impl HistoryView {
     pub fn show(
         ui: &mut Ui,
         runs: &[BenchmarkRun],
-        selected_runs: &mut [bool],
     ) -> HistoryAction {
         let mut action = HistoryAction::None;
 
@@ -44,40 +40,6 @@ impl HistoryView {
                 );
 
                 ui.add_space(8.0);
-
-                // Compare button (if 2 runs selected)
-                let selected_count: usize = selected_runs.iter().filter(|&&s| s).count();
-                if selected_count == 2 {
-                    let indices: Vec<usize> = selected_runs
-                        .iter()
-                        .enumerate()
-                        .filter(|(_, &s)| s)
-                        .map(|(i, _)| i)
-                        .collect();
-
-                    let compare_btn = egui::Button::new(
-                        RichText::new("Compare Selected Runs")
-                            .size(Theme::SIZE_BODY)
-                            .strong()
-                            .color(egui::Color32::WHITE),
-                    )
-                    .min_size(egui::vec2(160.0, 32.0))
-                    .fill(Theme::ACCENT)
-                    .rounding(Theme::CARD_ROUNDING);
-
-                    if ui.add(compare_btn).clicked() {
-                        action = HistoryAction::CompareRuns(indices[0], indices[1]);
-                    }
-                    ui.add_space(8.0);
-                } else if selected_count > 0 && selected_count < 2 {
-                    ui.label(
-                        RichText::new(format!("Select {} more to compare", 2 - selected_count))
-                            .size(Theme::SIZE_CAPTION)
-                            .color(Theme::TEXT_SECONDARY)
-                            .italics(),
-                    );
-                    ui.add_space(8.0);
-                }
 
                 // History list
                 if runs.is_empty() {
@@ -104,36 +66,16 @@ impl HistoryView {
                         });
                 } else {
                     for (idx, run) in runs.iter().enumerate() {
-                        let is_selected = selected_runs.get(idx).copied().unwrap_or(false);
-
-                        let frame = if is_selected {
-                            egui::Frame::none()
-                                .fill(Theme::ACCENT.linear_multiply(0.1))
-                                .stroke(egui::Stroke::new(2.0, Theme::ACCENT))
-                                .rounding(Theme::CARD_ROUNDING)
-                                .inner_margin(8.0)
-                        } else {
-                            egui::Frame::none()
-                                .fill(Theme::BG_CARD)
-                                .stroke(egui::Stroke::new(1.0, Theme::BORDER))
-                                .rounding(Theme::CARD_ROUNDING)
-                                .inner_margin(8.0)
-                        };
+                        let frame = egui::Frame::none()
+                            .fill(Theme::BG_CARD)
+                            .stroke(egui::Stroke::new(1.0, Theme::BORDER))
+                            .rounding(Theme::CARD_ROUNDING)
+                            .inner_margin(8.0);
 
                         frame.show(ui, |ui| {
                             ui.set_min_width(550.0);
 
                             ui.horizontal(|ui| {
-                                // Checkbox for selection
-                                let mut selected = is_selected;
-                                if ui.checkbox(&mut selected, "").changed() {
-                                    if let Some(s) = selected_runs.get_mut(idx) {
-                                        *s = selected;
-                                    }
-                                }
-
-                                ui.add_space(4.0);
-
                                 // Run info
                                 ui.vertical(|ui| {
                                     ui.horizontal(|ui| {
@@ -151,6 +93,14 @@ impl HistoryView {
                                             .size(Theme::SIZE_CAPTION)
                                             .color(Theme::TEXT_SECONDARY),
                                         );
+                                        if run.uploaded_at.is_some() {
+                                            ui.add_space(8.0);
+                                            ui.label(
+                                                RichText::new("Uploaded")
+                                                    .size(Theme::SIZE_CAPTION)
+                                                    .color(Theme::SUCCESS),
+                                            );
+                                        }
                                     });
 
                                     // Test count summary
@@ -254,39 +204,17 @@ impl HistoryView {
                                         }
 
                                         ui.add_space(4.0);
-                                    }
 
-                                    // Community Stats button (only if uploaded)
-                                    if run.uploaded_at.is_some() {
-                                        let stats_btn = egui::Button::new(
-                                            RichText::new("Community Stats")
+                                        // View Online button (only if uploaded)
+                                        ui.hyperlink_to(
+                                            RichText::new("View Online")
                                                 .size(Theme::SIZE_CAPTION)
-                                                .color(egui::Color32::WHITE),
-                                        )
-                                        .fill(Theme::SUCCESS)
-                                        .rounding(Theme::BADGE_ROUNDING);
-
-                                        if ui.add(stats_btn).clicked() {
-                                            action = HistoryAction::CommunityComparison(idx);
-                                        }
+                                                .color(Theme::ACCENT),
+                                            "https://workbench-pro-iota.vercel.app/results",
+                                        );
 
                                         ui.add_space(4.0);
                                     }
-
-                                    // Compare Online button
-                                    let online_btn = egui::Button::new(
-                                        RichText::new("Compare Online")
-                                            .size(Theme::SIZE_CAPTION)
-                                            .color(egui::Color32::WHITE),
-                                    )
-                                    .fill(Theme::ACCENT)
-                                    .rounding(Theme::BADGE_ROUNDING);
-
-                                    if ui.add(online_btn).clicked() {
-                                        action = HistoryAction::CompareOnline(idx);
-                                    }
-
-                                    ui.add_space(4.0);
 
                                     // View button
                                     let view_btn = egui::Button::new(
