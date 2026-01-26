@@ -149,8 +149,6 @@ export default function ResultsPage() {
     })
   }
 
-  const overallStats = calculateOverallStats(percentileRanks)
-
   return (
     <div className="h-[calc(100vh-120px)] flex">
       {/* Left Panel - Results List */}
@@ -268,16 +266,6 @@ export default function ResultsPage() {
               </button>
             </div>
 
-            {/* Summary Stats */}
-            <div className="flex gap-6 mb-6 pb-6 border-b border-wb-border">
-              <div>
-                <div className="text-2xl font-bold text-white">
-                  {overallStats.totalTests}
-                </div>
-                <div className="text-xs text-wb-text-secondary">Tests</div>
-              </div>
-            </div>
-
             {/* Comparison Charts */}
             <div className="space-y-6">
               {Object.entries(categories).map(([key, cat]) => (
@@ -355,8 +343,4 @@ export default function ResultsPage() {
       )}
     </div>
   )
-}
-
-function calculateOverallStats(percentileRanks) {
-  return { totalTests: percentileRanks.length }
 }
