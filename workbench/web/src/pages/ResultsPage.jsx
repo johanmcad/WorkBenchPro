@@ -11,6 +11,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Search,
+  Trophy,
+  ArrowUpDown,
 } from 'lucide-react'
 import { fetchBenchmarkRuns, fetchBenchmarkRun, fetchTestStatistics, fetchPercentileRank, deleteBenchmarkRun } from '../api'
 import CompactComparisonChart from '../components/CompactComparisonChart'
@@ -31,6 +33,8 @@ export default function ResultsPage() {
   // UI state
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [filterText, setFilterText] = useState('')
+  const [sortByScore, setSortByScore] = useState(true)
+  const [runScores, setRunScores] = useState({}) // { runId: { betterThanMedian, totalTests } }
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -73,6 +77,15 @@ export default function ResultsPage() {
         setSelectedRun(runData)
         setStatistics(statsData)
         setPercentileRanks(ranksData)
+
+        // Calculate and store score for selected run
+        if (ranksData && ranksData.length > 0) {
+          const betterThanMedian = ranksData.filter(r => r.percentile_rank > 50).length
+          setRunScores(prev => ({
+            ...prev,
+            [selectedId]: { betterThanMedian, totalTests: ranksData.length }
+          }))
+        }
       } catch (err) {
         setError(err.message)
       } finally {
@@ -81,6 +94,30 @@ export default function ResultsPage() {
     }
     loadDetail()
   }, [selectedId])
+
+  // Load scores for all runs in background
+  useEffect(() => {
+    if (results.length === 0) return
+
+    const loadAllScores = async () => {
+      for (const result of results) {
+        if (runScores[result.id]) continue // Skip if already loaded
+        try {
+          const ranksData = await fetchPercentileRank(result.id)
+          if (ranksData && ranksData.length > 0) {
+            const betterThanMedian = ranksData.filter(r => r.percentile_rank > 50).length
+            setRunScores(prev => ({
+              ...prev,
+              [result.id]: { betterThanMedian, totalTests: ranksData.length }
+            }))
+          }
+        } catch (err) {
+          // Silently ignore errors for background loading
+        }
+      }
+    }
+    loadAllScores()
+  }, [results])
 
   const handleDelete = async (e) => {
     e.preventDefault()
@@ -176,7 +213,7 @@ export default function ResultsPage() {
         {!panelCollapsed && (
           <div className="flex-1 overflow-y-auto flex flex-col">
             {/* Filter input */}
-            <div className="p-2 border-b border-wb-border">
+            <div className="p-2 border-b border-wb-border space-y-2">
               <div className="relative">
                 <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-wb-text-secondary" />
                 <input
@@ -187,6 +224,15 @@ export default function ResultsPage() {
                   className="w-full pl-7 pr-2 py-1 text-xs bg-wb-bg-secondary border border-wb-border rounded focus:outline-none focus:border-wb-accent"
                 />
               </div>
+              <button
+                onClick={() => setSortByScore(!sortByScore)}
+                className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors ${
+                  sortByScore ? 'bg-wb-accent/20 text-wb-accent' : 'text-wb-text-secondary hover:text-white'
+                }`}
+              >
+                <ArrowUpDown size={12} />
+                Sort by score
+              </button>
             </div>
             {loadingList ? (
               <div className="flex items-center justify-center py-12">
@@ -198,11 +244,19 @@ export default function ResultsPage() {
               </div>
             ) : (
               <div className="divide-y divide-wb-border/50 flex-1 overflow-y-auto">
-                {results.filter(r =>
-                  !filterText ||
-                  r.display_name?.toLowerCase().includes(filterText.toLowerCase()) ||
-                  r.cpu_name?.toLowerCase().includes(filterText.toLowerCase())
-                ).map((result) => (
+                {results
+                  .filter(r =>
+                    !filterText ||
+                    r.display_name?.toLowerCase().includes(filterText.toLowerCase()) ||
+                    r.cpu_name?.toLowerCase().includes(filterText.toLowerCase())
+                  )
+                  .sort((a, b) => {
+                    if (!sortByScore) return 0
+                    const scoreA = runScores[a.id]?.betterThanMedian ?? -1
+                    const scoreB = runScores[b.id]?.betterThanMedian ?? -1
+                    return scoreB - scoreA // Higher score first
+                  })
+                  .map((result) => (
                   <button
                     key={result.id}
                     onClick={() => setSelectedId(result.id)}
@@ -214,9 +268,15 @@ export default function ResultsPage() {
                       <span className="font-medium text-xs truncate flex-1">
                         {result.display_name}
                       </span>
-                      <span className="text-[10px] text-wb-text-secondary shrink-0">
-                        {formatDate(result.uploaded_at)}
-                      </span>
+                      {runScores[result.id] ? (
+                        <span className="text-[10px] text-green-400 shrink-0 font-medium">
+                          {runScores[result.id].betterThanMedian}/{runScores[result.id].totalTests}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-wb-text-secondary shrink-0">
+                          {formatDate(result.uploaded_at)}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
                       <span className="truncate">{result.cpu_name}</span>
@@ -250,7 +310,15 @@ export default function ResultsPage() {
             {/* Header */}
             <div className="flex items-start justify-between gap-4 mb-6">
               <div>
-                <h1 className="text-xl font-bold mb-2">{selectedRun.display_name}</h1>
+                <div className="flex items-center gap-3 mb-2">
+                  <h1 className="text-xl font-bold">{selectedRun.display_name}</h1>
+                  {runScores[selectedId] && (
+                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm font-medium">
+                      <Trophy size={14} />
+                      {runScores[selectedId].betterThanMedian}/{runScores[selectedId].totalTests} above median
+                    </span>
+                  )}
+                </div>
                 <div className="flex flex-wrap gap-2 text-sm">
                   <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-wb-bg-secondary rounded">
                     <Cpu size={14} className="text-wb-accent-light" />
