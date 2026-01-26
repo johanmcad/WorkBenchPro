@@ -13,8 +13,9 @@ import {
   Search,
   Trophy,
   ArrowUpDown,
+  Pencil,
 } from 'lucide-react'
-import { fetchBenchmarkRuns, fetchBenchmarkRun, fetchTestStatistics, fetchPercentileRank, deleteBenchmarkRun } from '../api'
+import { fetchBenchmarkRuns, fetchBenchmarkRun, fetchTestStatistics, fetchPercentileRank, deleteBenchmarkRun, updateBenchmarkRun } from '../api'
 import CompactComparisonChart from '../components/CompactComparisonChart'
 
 export default function ResultsPage() {
@@ -41,6 +42,14 @@ export default function ResultsPage() {
   const [deletePassword, setDeletePassword] = useState('')
   const [deleteError, setDeleteError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+
+  // Edit modal state
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editDisplayName, setEditDisplayName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editPassword, setEditPassword] = useState('')
+  const [editError, setEditError] = useState(null)
+  const [editing, setEditing] = useState(false)
 
   // Load results list
   useEffect(() => {
@@ -135,6 +144,34 @@ export default function ResultsPage() {
       setDeleteError(err.message)
     } finally {
       setDeleting(false)
+    }
+  }
+
+  const handleEdit = async (e) => {
+    e.preventDefault()
+    setEditing(true)
+    setEditError(null)
+    try {
+      await updateBenchmarkRun(selectedId, editPassword, {
+        display_name: editDisplayName,
+        description: editDescription,
+      })
+      // Update local state
+      setResults(results.map(r =>
+        r.id === selectedId
+          ? { ...r, display_name: editDisplayName, description: editDescription }
+          : r
+      ))
+      setSelectedRun(prev => prev ? {
+        ...prev,
+        display_name: editDisplayName,
+        description: editDescription,
+      } : null)
+      setShowEditModal(false)
+    } catch (err) {
+      setEditError(err.message)
+    } finally {
+      setEditing(false)
     }
   }
 
@@ -350,16 +387,32 @@ export default function ResultsPage() {
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  setShowDeleteModal(true)
-                  setDeletePassword('')
-                  setDeleteError(null)
-                }}
-                className="btn-secondary flex items-center gap-2 text-sm text-wb-error hover:bg-wb-error/20 hover:border-wb-error shrink-0"
-              >
-                <Trash2 size={16} />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    setShowEditModal(true)
+                    setEditDisplayName(selectedRun.display_name || '')
+                    setEditDescription(selectedRun.description || '')
+                    setEditPassword('')
+                    setEditError(null)
+                  }}
+                  className="btn-secondary flex items-center gap-2 text-sm hover:bg-wb-bg-secondary shrink-0"
+                  title="Edit"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(true)
+                    setDeletePassword('')
+                    setDeleteError(null)
+                  }}
+                  className="btn-secondary flex items-center gap-2 text-sm text-wb-error hover:bg-wb-error/20 hover:border-wb-error shrink-0"
+                  title="Delete"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
             </div>
 
             {/* Comparison Charts */}
@@ -431,6 +484,87 @@ export default function ResultsPage() {
                     <Trash2 size={18} />
                   )}
                   Remove
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="card max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold">Edit Benchmark</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-wb-text-secondary hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+            <form onSubmit={handleEdit}>
+              <div className="mb-4">
+                <label className="block text-sm text-wb-text-secondary mb-2">
+                  Display Name
+                </label>
+                <input
+                  type="text"
+                  value={editDisplayName}
+                  onChange={(e) => setEditDisplayName(e.target.value)}
+                  placeholder="Enter display name"
+                  className="input w-full"
+                  autoFocus
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm text-wb-text-secondary mb-2">
+                  Description (optional)
+                </label>
+                <input
+                  type="text"
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="e.g. VDI, Desktop, Laptop"
+                  className="input w-full"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm text-wb-text-secondary mb-2">
+                  Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="input w-full"
+                />
+              </div>
+              {editError && (
+                <p className="text-wb-error text-sm mb-4">{editError}</p>
+              )}
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-secondary"
+                  disabled={editing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex items-center gap-2"
+                  disabled={editing || !editPassword || !editDisplayName.trim()}
+                >
+                  {editing ? (
+                    <Loader2 size={18} className="animate-spin" />
+                  ) : (
+                    <Pencil size={18} />
+                  )}
+                  Save
                 </button>
               </div>
             </form>

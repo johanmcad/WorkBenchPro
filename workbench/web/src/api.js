@@ -88,6 +88,25 @@ export async function deleteBenchmarkRun(id, password) {
   }
 }
 
+export async function updateBenchmarkRun(id, password, { display_name, description }) {
+  // Verify password
+  const passwordHash = await hashPassword(password)
+  if (passwordHash !== ADMIN_PASSWORD_HASH) {
+    throw new Error('Invalid admin password')
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/benchmark_runs?id=eq.${id}`
+  const response = await fetch(url, {
+    method: 'PATCH',
+    headers,
+    body: JSON.stringify({ display_name, description: description || null }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to update: ${response.status}`)
+  }
+}
+
 // Fetch test statistics with histogram buckets for community comparison
 export async function fetchTestStatistics() {
   const url = `${SUPABASE_URL}/rest/v1/rpc/get_test_statistics`
