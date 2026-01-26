@@ -45,6 +45,21 @@ cargo build --release
 # The binary will be at target/release/workbench-pro.exe
 ```
 
+## Antivirus Notice
+
+Some antivirus software may flag WorkBench-Pro as suspicious. This is a **false positive** caused by the benchmarking behaviors:
+
+- Collecting system hardware information
+- Spawning multiple processes (PowerShell, cmd, git, etc.)
+- Creating and deleting thousands of test files
+- Querying Windows services and registry
+- Measuring Windows Defender performance impact
+
+If your antivirus blocks the application, you can:
+1. Add an exception for `workbench-pro.exe`
+2. Build from source and verify the code yourself
+3. Report the false positive to your AV vendor
+
 ## Usage
 
 Simply run the executable:
