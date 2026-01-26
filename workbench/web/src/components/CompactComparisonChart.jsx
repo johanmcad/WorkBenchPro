@@ -76,6 +76,11 @@ const TEST_DESCRIPTIONS = {
     why: 'Affects build artifact generation, log writing, database commits.',
   },
   'Windows Compression': {
+    what: 'Tests Windows built-in zip compression performance.',
+    how: 'Creates test files, then compresses and extracts using PowerShell Compress-Archive/Expand-Archive.',
+    why: 'Measures compression/decompression speed with Windows native tools.',
+  },
+  'C# Compilation': {
     what: 'Tests Windows native C# compilation performance.',
     how: 'Generates C# source files with classes and functions, then compiles with csc.exe.',
     why: 'Measures build performance using Windows built-in compiler.',

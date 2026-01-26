@@ -637,7 +637,7 @@ impl Benchmark for CSharpCompileBenchmark {
     }
 
     fn name(&self) -> &'static str {
-        "Native Compiler"
+        "C# Compilation"
     }
 
     fn description(&self) -> &'static str {
