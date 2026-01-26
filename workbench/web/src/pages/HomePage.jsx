@@ -195,7 +195,7 @@ export default function HomePage() {
 
             <div className="space-y-4">
               <a
-                href="https://github.com/johanmcad/workbench/releases/latest/download/workbench.exe"
+                href="https://github.com/johanmcad/WorkBenchPro/releases/latest/download/workbench.exe"
                 className="btn-primary inline-flex items-center gap-2 text-lg"
               >
                 <Download size={20} />
@@ -205,7 +205,7 @@ export default function HomePage() {
               <p className="text-sm text-wb-text-secondary">
                 Or view all releases on{' '}
                 <a
-                  href="https://github.com/johanmcad/workbench/releases"
+                  href="https://github.com/johanmcad/WorkBenchPro/releases"
                   className="text-wb-accent-light hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"

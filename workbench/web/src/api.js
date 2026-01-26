@@ -63,7 +63,7 @@ export async function fetchStats() {
 export async function fetchLatestRelease() {
   try {
     // Replace with your actual GitHub repo
-    const response = await fetch('https://api.github.com/repos/johanmcad/workbench/releases/latest')
+    const response = await fetch('https://api.github.com/repos/johanmcad/WorkBenchPro/releases/latest')
     if (!response.ok) return null
     return response.json()
   } catch {
