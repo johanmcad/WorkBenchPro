@@ -3,6 +3,9 @@ fn main() {
     {
         let mut res = winres::WindowsResource::new();
 
+        // Icon
+        res.set_icon("assets/icon.ico");
+
         // Version info
         res.set("FileVersion", "1.0.0.0");
         res.set("ProductVersion", "1.0.0.0");
