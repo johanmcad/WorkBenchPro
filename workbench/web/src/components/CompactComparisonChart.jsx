@@ -56,10 +56,13 @@ function TestRow({ test, isExpanded, onToggle }) {
   const userValue = percentile?.user_value
   const isHigherBetter = percentile?.is_higher_better ?? true
 
-  // Calculate positions as percentages (flip for lower-is-better so right = better)
+  // Check if we have a meaningful range
   const range = max_value - min_value
-  let userPosition = range > 0 ? ((userValue - min_value) / range) * 100 : 50
-  let medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
+  const hasRange = range > 0.0001 // Avoid floating point issues
+
+  // Calculate positions as percentages (flip for lower-is-better so right = better)
+  let userPosition = hasRange ? ((userValue - min_value) / range) * 100 : 50
+  let medianPosition = hasRange ? ((p50 - min_value) / range) * 100 : 50
 
   // For lower-is-better, flip positions so right = better (lower values)
   if (!isHigherBetter) {
@@ -91,44 +94,52 @@ function TestRow({ test, isExpanded, onToggle }) {
 
         {/* Range bar */}
         <div className="flex-1 flex items-center gap-2">
-          <span className="text-[9px] text-wb-text-secondary w-10 text-right shrink-0">
-            {formatValue(leftValue)}
-          </span>
+          {hasRange ? (
+            <>
+              <span className="text-[9px] text-wb-text-secondary w-10 text-right shrink-0">
+                {formatValue(leftValue)}
+              </span>
 
-          {/* Bar */}
-          <div className="flex-1 relative h-2">
-            <div className="absolute inset-0 bg-wb-border rounded-full" />
-            <div
-              className="absolute inset-0 rounded-full opacity-50"
-              style={{
-                background: 'linear-gradient(90deg, rgba(239,68,68,0.3) 0%, rgba(59,130,246,0.3) 50%, rgba(16,185,129,0.3) 100%)'
-              }}
-            />
+              {/* Bar */}
+              <div className="flex-1 relative h-2">
+                <div className="absolute inset-0 bg-wb-border rounded-full" />
+                <div
+                  className="absolute inset-0 rounded-full opacity-50"
+                  style={{
+                    background: 'linear-gradient(90deg, rgba(239,68,68,0.3) 0%, rgba(59,130,246,0.3) 50%, rgba(16,185,129,0.3) 100%)'
+                  }}
+                />
 
-            {/* Median marker */}
-            <div
-              className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-yellow-400 rounded-full z-10"
-              style={{ left: `${Math.min(Math.max(medianPosition, 0), 100)}%` }}
-              title={`Median: ${formatValue(p50)} ${unit}`}
-            />
+                {/* Median marker */}
+                <div
+                  className="absolute top-1/2 -translate-y-1/2 w-0.5 h-3 bg-yellow-400 rounded-full z-10"
+                  style={{ left: `${Math.min(Math.max(medianPosition, 0), 100)}%` }}
+                  title={`Median: ${formatValue(p50)} ${unit}`}
+                />
 
-            {/* User marker */}
-            {userValue !== undefined && (
-              <div
-                className="absolute top-1/2 -translate-y-1/2 z-20"
-                style={{ left: `${Math.min(Math.max(userPosition, 0), 100)}%` }}
-                title={`Your score: ${formatValue(userValue)} ${unit}`}
-              >
-                <div className="relative -translate-x-1/2">
-                  <div className="w-2.5 h-2.5 bg-green-400 rounded-full border border-wb-bg-card shadow" />
-                </div>
+                {/* User marker */}
+                {userValue !== undefined && (
+                  <div
+                    className="absolute top-1/2 -translate-y-1/2 z-20"
+                    style={{ left: `${Math.min(Math.max(userPosition, 0), 100)}%` }}
+                    title={`Your score: ${formatValue(userValue)} ${unit}`}
+                  >
+                    <div className="relative -translate-x-1/2">
+                      <div className="w-2.5 h-2.5 bg-green-400 rounded-full border border-wb-bg-card shadow" />
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          <span className="text-[9px] text-wb-text-secondary w-10 shrink-0">
-            {formatValue(rightValue)}
-          </span>
+              <span className="text-[9px] text-wb-text-secondary w-10 shrink-0">
+                {formatValue(rightValue)}
+              </span>
+            </>
+          ) : (
+            <span className="text-[9px] text-wb-text-secondary italic">
+              Only 1 sample in community data
+            </span>
+          )}
         </div>
 
         {/* User value */}
