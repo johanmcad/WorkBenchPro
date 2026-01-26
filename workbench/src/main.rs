@@ -86,8 +86,8 @@ fn main() -> Result<()> {
 
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
-            .with_inner_size([1024.0, 768.0])
-            .with_min_inner_size([800.0, 600.0])
+            .with_inner_size([720.0, 400.0])
+            .with_min_inner_size([600.0, 350.0])
             .with_title("WorkBench-Pro - Developer Workstation Benchmark"),
         renderer,
         wgpu_options: eframe::egui_wgpu::WgpuConfiguration {

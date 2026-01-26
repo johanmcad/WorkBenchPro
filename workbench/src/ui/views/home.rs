@@ -295,8 +295,6 @@ impl HomeView {
                 );
             });
 
-            ui.add_space(6.0);
-
             // System Info Card - compact
             egui::Frame::none()
                 .fill(Theme::BG_CARD)
@@ -343,7 +341,32 @@ impl HomeView {
                     });
                 });
 
-            ui.add_space(6.0);
+            // Buttons
+            ui.horizontal(|ui| {
+                let run_button = egui::Button::new(
+                    RichText::new("Run Benchmark")
+                        .size(Theme::SIZE_BODY)
+                        .strong()
+                        .color(egui::Color32::WHITE),
+                )
+                .min_size(egui::vec2(120.0, 28.0))
+                .fill(Theme::ACCENT)
+                .rounding(4.0);
+
+                if ui.add(run_button).clicked() {
+                    action = HomeAction::Run;
+                }
+
+                let history_button = egui::Button::new(
+                    RichText::new("History").size(Theme::SIZE_CAPTION),
+                )
+                .min_size(egui::vec2(70.0, 28.0))
+                .rounding(4.0);
+
+                if ui.add(history_button).clicked() {
+                    action = HomeAction::History;
+                }
+            });
 
             // Test Specifications Card - compact
             egui::Frame::none()
@@ -366,8 +389,6 @@ impl HomeView {
                                 .color(Theme::TEXT_SECONDARY),
                         );
                     });
-
-                    ui.add_space(4.0);
 
                     // Project Operations
                     CollapsingHeader::new(
@@ -414,43 +435,8 @@ impl HomeView {
                     });
                 });
 
-            ui.add_space(6.0);
-
-            // Buttons - compact
-            ui.horizontal(|ui| {
-                let run_button = egui::Button::new(
-                    RichText::new("Run Benchmark")
-                        .size(Theme::SIZE_BODY)
-                        .strong()
-                        .color(egui::Color32::WHITE),
-                )
-                .min_size(egui::vec2(120.0, 28.0))
-                .fill(Theme::ACCENT)
-                .rounding(4.0);
-
-                if ui.add(run_button).clicked() {
-                    action = HomeAction::Run;
-                }
-
-                ui.add_space(4.0);
-
-                let history_button = egui::Button::new(
-                    RichText::new("History").size(Theme::SIZE_CAPTION),
-                )
-                .min_size(egui::vec2(70.0, 28.0))
-                .rounding(4.0);
-
-                if ui.add(history_button).clicked() {
-                    action = HomeAction::History;
-                }
-            });
-
-            ui.add_space(4.0);
-
             // About section - version and links
-            ui.add_space(12.0);
             ui.separator();
-            ui.add_space(4.0);
             ui.horizontal(|ui| {
                 ui.label(
                     RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
@@ -477,6 +463,17 @@ impl HomeView {
                         .size(Theme::SIZE_CAPTION)
                         .color(Theme::ACCENT),
                     "https://github.com/johanmcad/workbench-pro",
+                );
+                ui.label(
+                    RichText::new("|")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::TEXT_SECONDARY),
+                );
+                ui.hyperlink_to(
+                    RichText::new("johanmcad@gmail.com")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::ACCENT),
+                    "mailto:johanmcad@gmail.com",
                 );
             });
         });

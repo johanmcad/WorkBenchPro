@@ -1,4 +1,4 @@
-import { Github, Twitter } from 'lucide-react'
+import { Github, Mail } from 'lucide-react'
 
 export default function Footer() {
   return (
@@ -23,9 +23,13 @@ export default function Footer() {
             >
               <Github size={20} />
             </a>
-            <span className="text-wb-text-secondary text-sm">
-              Built with Rust + egui
-            </span>
+            <a
+              href="mailto:johanmcad@gmail.com"
+              className="text-wb-text-secondary hover:text-white transition-colors flex items-center gap-1"
+            >
+              <Mail size={18} />
+              <span className="text-sm">johanmcad@gmail.com</span>
+            </a>
           </div>
         </div>
       </div>
