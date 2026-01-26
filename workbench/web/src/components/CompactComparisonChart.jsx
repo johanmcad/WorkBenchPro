@@ -189,7 +189,7 @@ export default function CompactComparisonChart({
             <span className="text-red-400/70">← worse</span>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span>You</span>
+              <span>Selected</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-yellow-400" />
@@ -322,7 +322,7 @@ function TestRow({ test, isExpanded, onToggle }) {
               <div
                 className="absolute top-1/2 -translate-y-1/2 z-20"
                 style={{ left: `${Math.min(Math.max(userPosition, 0), 100)}%` }}
-                title={`Your score: ${formatValue(userValue)} ${unit}`}
+                title={`Selected: ${formatValue(userValue)} ${unit}`}
               >
                 <div className="relative -translate-x-1/2">
                   <div className="w-2.5 h-2.5 bg-green-400 rounded-full border border-wb-bg-card shadow" />
@@ -363,7 +363,7 @@ function TestRow({ test, isExpanded, onToggle }) {
           )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div>
-              <div className="text-wb-text-secondary text-[10px]">Your Value</div>
+              <div className="text-wb-text-secondary text-[10px]">Selected</div>
               <div className="text-green-400 font-medium">
                 {userValue !== undefined ? `${formatValue(userValue)} ${unit}` : '-'}
               </div>
