@@ -18,14 +18,21 @@ import {
 import { fetchBenchmarkRuns, fetchBenchmarkRun, fetchTestStatistics, fetchPercentileRank, deleteBenchmarkRun, updateBenchmarkRun } from '../api'
 import CompactComparisonChart from '../components/CompactComparisonChart'
 
+// Colors for multi-select (up to 3)
+const SELECTION_COLORS = [
+  { name: 'Green', bg: 'bg-green-400', text: 'text-green-400', hex: '#4ade80' },
+  { name: 'Blue', bg: 'bg-blue-400', text: 'text-blue-400', hex: '#60a5fa' },
+  { name: 'Orange', bg: 'bg-orange-400', text: 'text-orange-400', hex: '#fb923c' },
+]
+
 export default function ResultsPage() {
   const { id: urlId } = useParams()
 
   const [results, setResults] = useState([])
-  const [selectedId, setSelectedId] = useState(urlId || null)
-  const [selectedRun, setSelectedRun] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(urlId ? [urlId] : []) // Up to 3 selections
+  const [selectedRuns, setSelectedRuns] = useState({}) // { id: runData }
   const [statistics, setStatistics] = useState([])
-  const [percentileRanks, setPercentileRanks] = useState([])
+  const [allPercentileRanks, setAllPercentileRanks] = useState({}) // { id: ranksData }
 
   const [loadingList, setLoadingList] = useState(true)
   const [loadingDetail, setLoadingDetail] = useState(false)
@@ -59,8 +66,8 @@ export default function ResultsPage() {
         const data = await fetchBenchmarkRuns({})
         setResults(data)
         // Auto-select first result if none selected
-        if (!selectedId && data.length > 0) {
-          setSelectedId(data[0].id)
+        if (selectedIds.length === 0 && data.length > 0) {
+          setSelectedIds([data[0].id])
         }
       } catch (err) {
         setError(err.message)
@@ -71,38 +78,66 @@ export default function ResultsPage() {
     loadResults()
   }, [])
 
-  // Load selected result details
+  // Load selected result details for all selected IDs
   useEffect(() => {
-    if (!selectedId) return
+    if (selectedIds.length === 0) return
 
-    const loadDetail = async () => {
+    const loadDetails = async () => {
       setLoadingDetail(true)
       try {
-        const [runData, statsData, ranksData] = await Promise.all([
-          fetchBenchmarkRun(selectedId),
-          fetchTestStatistics(),
-          fetchPercentileRank(selectedId),
-        ])
-        setSelectedRun(runData)
+        // Load statistics once (shared across all selections)
+        const statsData = await fetchTestStatistics()
         setStatistics(statsData)
-        setPercentileRanks(ranksData)
 
-        // Calculate and store score for selected run
-        if (ranksData && ranksData.length > 0) {
-          const betterThanMedian = ranksData.filter(r => r.percentile_rank > 50).length
-          setRunScores(prev => ({
-            ...prev,
-            [selectedId]: { betterThanMedian, totalTests: ranksData.length }
-          }))
+        // Load details for each selected ID
+        const newRuns = {}
+        const newRanks = {}
+
+        for (const id of selectedIds) {
+          // Skip if already loaded
+          if (selectedRuns[id] && allPercentileRanks[id]) continue
+
+          const [runData, ranksData] = await Promise.all([
+            fetchBenchmarkRun(id),
+            fetchPercentileRank(id),
+          ])
+          newRuns[id] = runData
+          newRanks[id] = ranksData
+
+          // Calculate and store score
+          if (ranksData && ranksData.length > 0) {
+            const betterThanMedian = ranksData.filter(r => r.percentile_rank > 50).length
+            setRunScores(prev => ({
+              ...prev,
+              [id]: { betterThanMedian, totalTests: ranksData.length }
+            }))
+          }
         }
+
+        // Merge with existing data, remove deselected
+        setSelectedRuns(prev => {
+          const updated = { ...prev, ...newRuns }
+          // Remove runs that are no longer selected
+          Object.keys(updated).forEach(id => {
+            if (!selectedIds.includes(id)) delete updated[id]
+          })
+          return updated
+        })
+        setAllPercentileRanks(prev => {
+          const updated = { ...prev, ...newRanks }
+          Object.keys(updated).forEach(id => {
+            if (!selectedIds.includes(id)) delete updated[id]
+          })
+          return updated
+        })
       } catch (err) {
         setError(err.message)
       } finally {
         setLoadingDetail(false)
       }
     }
-    loadDetail()
-  }, [selectedId])
+    loadDetails()
+  }, [selectedIds])
 
   // Load scores for all runs in background
   useEffect(() => {
@@ -128,17 +163,41 @@ export default function ResultsPage() {
     loadAllScores()
   }, [results])
 
+  // Toggle selection of a run (add/remove from selected, max 3)
+  const toggleSelection = (id) => {
+    setSelectedIds(prev => {
+      if (prev.includes(id)) {
+        // Remove from selection
+        return prev.filter(i => i !== id)
+      } else if (prev.length < 3) {
+        // Add to selection (max 3)
+        return [...prev, id]
+      }
+      // Already at max, replace the last one
+      return [...prev.slice(0, 2), id]
+    })
+  }
+
+  // Get color for a selected ID (based on position in selectedIds array)
+  const getSelectionColor = (id) => {
+    const index = selectedIds.indexOf(id)
+    return index >= 0 ? SELECTION_COLORS[index] : null
+  }
+
+  // For modals/actions, use the first selected ID as "primary"
+  const primarySelectedId = selectedIds[0] || null
+  const primarySelectedRun = selectedRuns[primarySelectedId] || null
+
   const handleDelete = async (e) => {
     e.preventDefault()
     setDeleting(true)
     setDeleteError(null)
     try {
-      await deleteBenchmarkRun(selectedId, deletePassword)
-      // Remove from list and select next
-      const newResults = results.filter(r => r.id !== selectedId)
+      await deleteBenchmarkRun(primarySelectedId, deletePassword)
+      // Remove from list and selections
+      const newResults = results.filter(r => r.id !== primarySelectedId)
       setResults(newResults)
-      setSelectedId(newResults.length > 0 ? newResults[0].id : null)
-      setSelectedRun(null)
+      setSelectedIds(prev => prev.filter(id => id !== primarySelectedId))
       setShowDeleteModal(false)
     } catch (err) {
       setDeleteError(err.message)
@@ -152,21 +211,24 @@ export default function ResultsPage() {
     setEditing(true)
     setEditError(null)
     try {
-      await updateBenchmarkRun(selectedId, editPassword, {
+      await updateBenchmarkRun(primarySelectedId, editPassword, {
         display_name: editDisplayName,
         description: editDescription,
       })
       // Update local state
       setResults(results.map(r =>
-        r.id === selectedId
+        r.id === primarySelectedId
           ? { ...r, display_name: editDisplayName, description: editDescription }
           : r
       ))
-      setSelectedRun(prev => prev ? {
+      setSelectedRuns(prev => prev[primarySelectedId] ? {
         ...prev,
-        display_name: editDisplayName,
-        description: editDescription,
-      } : null)
+        [primarySelectedId]: {
+          ...prev[primarySelectedId],
+          display_name: editDisplayName,
+          description: editDescription,
+        }
+      } : prev)
       setShowEditModal(false)
     } catch (err) {
       setEditError(err.message)
@@ -183,43 +245,58 @@ export default function ResultsPage() {
     })
   }
 
-  // Build comparison data
+  // Build comparison data for all selected runs
   const categories = {
     project_operations: { name: 'Project Operations', color: '#3b82f6', tests: [] },
     build_performance: { name: 'Build Performance', color: '#8b5cf6', tests: [] },
     responsiveness: { name: 'Responsiveness', color: '#10b981', tests: [] },
   }
 
-  if (selectedRun) {
-    const userTestsMap = new Map()
-    const allUserTests = [
-      ...(selectedRun.results.project_operations || []),
-      ...(selectedRun.results.build_performance || []),
-      ...(selectedRun.results.responsiveness || []),
-    ]
-    allUserTests.forEach(t => userTestsMap.set(t.test_id, t))
+  // Build selections array with data for passing to chart
+  const selections = selectedIds.map((id, index) => ({
+    id,
+    displayName: selectedRuns[id]?.display_name || 'Loading...',
+    color: SELECTION_COLORS[index],
+    run: selectedRuns[id],
+    percentileRanks: allPercentileRanks[id] || [],
+  })).filter(s => s.run) // Only include loaded runs
 
-    const percentileMap = new Map()
-    percentileRanks.forEach(p => percentileMap.set(p.test_id, p))
+  if (selections.length > 0) {
+    // Use first selection to determine categories
+    const firstRun = selections[0].run
 
     statistics.forEach((stat) => {
-      const userTest = userTestsMap.get(stat.test_id)
-      const percentile = percentileMap.get(stat.test_id)
-
       let category = null
-      if (selectedRun.results.project_operations?.some(t => t.test_id === stat.test_id)) {
+      if (firstRun.results.project_operations?.some(t => t.test_id === stat.test_id)) {
         category = 'project_operations'
-      } else if (selectedRun.results.build_performance?.some(t => t.test_id === stat.test_id)) {
+      } else if (firstRun.results.build_performance?.some(t => t.test_id === stat.test_id)) {
         category = 'build_performance'
-      } else if (selectedRun.results.responsiveness?.some(t => t.test_id === stat.test_id)) {
+      } else if (firstRun.results.responsiveness?.some(t => t.test_id === stat.test_id)) {
         category = 'responsiveness'
       }
 
       if (category && categories[category]) {
+        // Build selections data for this specific test
+        const testSelections = selections.map(sel => {
+          const allTests = [
+            ...(sel.run.results.project_operations || []),
+            ...(sel.run.results.build_performance || []),
+            ...(sel.run.results.responsiveness || []),
+          ]
+          const userTest = allTests.find(t => t.test_id === stat.test_id)
+          const percentile = sel.percentileRanks.find(p => p.test_id === stat.test_id)
+          return {
+            id: sel.id,
+            displayName: sel.displayName,
+            color: sel.color,
+            userTest,
+            percentile,
+          }
+        })
+
         categories[category].tests.push({
           ...stat,
-          userTest,
-          percentile,
+          selections: testSelections,
         })
       }
     })
@@ -293,41 +370,54 @@ export default function ResultsPage() {
                     const scoreB = runScores[b.id]?.betterThanMedian ?? -1
                     return scoreB - scoreA // Higher score first
                   })
-                  .map((result) => (
-                  <button
-                    key={result.id}
-                    onClick={() => setSelectedId(result.id)}
-                    className={`w-full text-left p-2 hover:bg-wb-bg-secondary/50 transition-colors ${
-                      selectedId === result.id ? 'bg-wb-bg-secondary border-l-2 border-wb-accent' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium text-xs truncate flex-1">
-                        {result.display_name}
-                      </span>
-                      {runScores[result.id] ? (
-                        <span className="text-[10px] text-green-400 shrink-0 font-medium">
-                          {runScores[result.id].betterThanMedian}/{runScores[result.id].totalTests}
-                        </span>
-                      ) : (
-                        <span className="text-[10px] text-wb-text-secondary shrink-0">
-                          {formatDate(result.uploaded_at)}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
-                      {result.description && (
-                        <>
-                          <span className="text-wb-accent">{result.description}</span>
+                  .map((result) => {
+                    const selectionColor = getSelectionColor(result.id)
+                    const isSelected = selectedIds.includes(result.id)
+                    return (
+                      <button
+                        key={result.id}
+                        onClick={() => toggleSelection(result.id)}
+                        className={`w-full text-left p-2 hover:bg-wb-bg-secondary/50 transition-colors ${
+                          isSelected ? 'bg-wb-bg-secondary' : ''
+                        }`}
+                        style={isSelected ? { borderLeft: `3px solid ${selectionColor?.hex}` } : {}}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {isSelected && (
+                              <div
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: selectionColor?.hex }}
+                              />
+                            )}
+                            <span className="font-medium text-xs truncate">
+                              {result.display_name}
+                            </span>
+                          </div>
+                          {runScores[result.id] ? (
+                            <span className="text-[10px] text-green-400 shrink-0 font-medium">
+                              {runScores[result.id].betterThanMedian}/{runScores[result.id].totalTests}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-wb-text-secondary shrink-0">
+                              {formatDate(result.uploaded_at)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
+                          {result.description && (
+                            <>
+                              <span className="text-wb-accent">{result.description}</span>
+                              <span>•</span>
+                            </>
+                          )}
+                          <span className="truncate">{result.cpu_name}</span>
                           <span>•</span>
-                        </>
-                      )}
-                      <span className="truncate">{result.cpu_name}</span>
-                      <span>•</span>
-                      <span>{Math.round(result.memory_gb)}GB</span>
-                    </div>
-                  </button>
-                ))}
+                          <span>{Math.round(result.memory_gb)}GB</span>
+                        </div>
+                      </button>
+                    )
+                  })}
               </div>
             )}
           </div>
@@ -336,7 +426,7 @@ export default function ResultsPage() {
 
       {/* Right Panel - Comparison View */}
       <div className="flex-1 overflow-y-auto">
-        {!selectedId ? (
+        {selectedIds.length === 0 ? (
           <div className="flex items-center justify-center h-full text-wb-text-secondary">
             Select a result to view comparison
           </div>
@@ -344,75 +434,90 @@ export default function ResultsPage() {
           <div className="flex items-center justify-center h-full">
             <Loader2 size={32} className="animate-spin text-wb-accent" />
           </div>
-        ) : !selectedRun ? (
+        ) : selections.length === 0 ? (
           <div className="flex items-center justify-center h-full text-wb-text-secondary">
-            Failed to load result
+            Failed to load results
           </div>
         ) : (
           <div className="p-6">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4 mb-6">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <h1 className="text-xl font-bold">{selectedRun.display_name}</h1>
-                  {selectedRun.description && (
-                    <span className="text-wb-text-secondary text-sm">({selectedRun.description})</span>
-                  )}
-                  {runScores[selectedId] && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm font-medium">
-                      <Trophy size={14} />
-                      {runScores[selectedId].betterThanMedian}/{runScores[selectedId].totalTests} above median
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-2 text-sm">
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-wb-bg-secondary rounded">
-                    <Cpu size={14} className="text-wb-accent-light" />
-                    {selectedRun.cpu_name}
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-wb-bg-secondary rounded">
-                    <MemoryStick size={14} className="text-wb-accent-light" />
-                    {selectedRun.memory_gb.toFixed(0)} GB
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-wb-bg-secondary rounded">
-                    <Monitor size={14} className="text-wb-accent-light" />
-                    {selectedRun.os_name}
-                  </span>
-                  {selectedRun.storage_type && (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-wb-bg-secondary rounded">
-                      <HardDrive size={14} className="text-wb-accent-light" />
-                      {selectedRun.storage_type}
-                    </span>
-                  )}
-                </div>
-              </div>
+            {/* Header - show all selected computers */}
+            <div className="mb-6 space-y-3">
+              {selections.map((sel, index) => (
+                <div
+                  key={sel.id}
+                  className="flex items-start justify-between gap-4 p-3 rounded-lg"
+                  style={{ backgroundColor: `${sel.color.hex}10`, borderLeft: `3px solid ${sel.color.hex}` }}
+                >
+                  <div>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className="w-3 h-3 rounded-full shrink-0"
+                        style={{ backgroundColor: sel.color.hex }}
+                      />
+                      <h2 className="text-lg font-bold">{sel.displayName}</h2>
+                      {sel.run.description && (
+                        <span className="text-wb-text-secondary text-sm">({sel.run.description})</span>
+                      )}
+                      {runScores[sel.id] && (
+                        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-green-500/20 text-green-400 rounded text-xs font-medium">
+                          <Trophy size={12} />
+                          {runScores[sel.id].betterThanMedian}/{runScores[sel.id].totalTests}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-wb-bg-secondary rounded">
+                        <Cpu size={12} className="text-wb-accent-light" />
+                        {sel.run.cpu_name}
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-wb-bg-secondary rounded">
+                        <MemoryStick size={12} className="text-wb-accent-light" />
+                        {sel.run.memory_gb.toFixed(0)} GB
+                      </span>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-wb-bg-secondary rounded">
+                        <Monitor size={12} className="text-wb-accent-light" />
+                        {sel.run.os_name}
+                      </span>
+                      {sel.run.storage_type && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-wb-bg-secondary rounded">
+                          <HardDrive size={12} className="text-wb-accent-light" />
+                          {sel.run.storage_type}
+                        </span>
+                      )}
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={() => {
-                    setShowEditModal(true)
-                    setEditDisplayName(selectedRun.display_name || '')
-                    setEditDescription(selectedRun.description || '')
-                    setEditPassword('')
-                    setEditError(null)
-                  }}
-                  className="btn-secondary flex items-center gap-2 text-sm hover:bg-wb-bg-secondary shrink-0"
-                  title="Edit"
-                >
-                  <Pencil size={16} />
-                </button>
-                <button
-                  onClick={() => {
-                    setShowDeleteModal(true)
-                    setDeletePassword('')
-                    setDeleteError(null)
-                  }}
-                  className="btn-secondary flex items-center gap-2 text-sm text-wb-error hover:bg-wb-error/20 hover:border-wb-error shrink-0"
-                  title="Delete"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
+                  {/* Only show edit/delete for first selection */}
+                  {index === 0 && (
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        onClick={() => {
+                          setShowEditModal(true)
+                          setEditDisplayName(sel.run.display_name || '')
+                          setEditDescription(sel.run.description || '')
+                          setEditPassword('')
+                          setEditError(null)
+                        }}
+                        className="btn-secondary flex items-center gap-2 text-xs hover:bg-wb-bg-secondary shrink-0 p-1.5"
+                        title="Edit"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setShowDeleteModal(true)
+                          setDeletePassword('')
+                          setDeleteError(null)
+                        }}
+                        className="btn-secondary flex items-center gap-2 text-xs text-wb-error hover:bg-wb-error/20 hover:border-wb-error shrink-0 p-1.5"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             {/* Comparison Charts */}
@@ -423,6 +528,7 @@ export default function ResultsPage() {
                     key={key}
                     tests={cat.tests}
                     title={cat.name}
+                    selections={selections}
                   />
                 )
               ))}

@@ -1,10 +1,25 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Menu, X, Gauge, BarChart3, Download } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Navbar() {
   const location = useLocation()
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  const handleDownloadClick = (e) => {
+    e.preventDefault()
+    if (location.pathname === '/') {
+      // Already on home page, just scroll
+      document.getElementById('download')?.scrollIntoView({ behavior: 'smooth' })
+    } else {
+      // Navigate to home page then scroll
+      navigate('/')
+      setTimeout(() => {
+        document.getElementById('download')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
+  }
 
   const links = [
     { path: '/', label: 'Home', icon: Gauge },
@@ -42,7 +57,8 @@ export default function Navbar() {
               </Link>
             ))}
             <a
-              href="#download"
+              href="/#download"
+              onClick={handleDownloadClick}
               className="flex items-center gap-2 ml-4 btn-primary"
             >
               <Download size={18} />
@@ -82,8 +98,8 @@ export default function Navbar() {
               </Link>
             ))}
             <a
-              href="#download"
-              onClick={() => setMobileMenuOpen(false)}
+              href="/#download"
+              onClick={(e) => { handleDownloadClick(e); setMobileMenuOpen(false) }}
               className="flex items-center gap-3 px-4 py-3 btn-primary w-full justify-center"
             >
               <Download size={20} />

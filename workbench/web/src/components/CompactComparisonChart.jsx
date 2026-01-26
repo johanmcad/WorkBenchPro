@@ -167,6 +167,7 @@ const TEST_DESCRIPTIONS = {
 export default function CompactComparisonChart({
   tests,
   title,
+  selections = [], // Array of { id, displayName, color }
 }) {
   const [expandedTest, setExpandedTest] = useState(null)
 
@@ -184,13 +185,18 @@ export default function CompactComparisonChart({
       {title && (
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-wb-text-secondary">{title}</h3>
-          {/* Legend */}
-          <div className="flex gap-3 text-[10px] text-wb-text-secondary">
+          {/* Legend - show all selections with their colors */}
+          <div className="flex gap-3 text-[10px] text-wb-text-secondary flex-wrap justify-end">
             <span className="text-red-400/70">← worse</span>
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span>Selected</span>
-            </div>
+            {selections.map((sel) => (
+              <div key={sel.id} className="flex items-center gap-1">
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: sel.color.hex }}
+                />
+                <span className="truncate max-w-20">{sel.displayName}</span>
+              </div>
+            ))}
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-yellow-400" />
               <span>Median</span>
@@ -205,6 +211,7 @@ export default function CompactComparisonChart({
           <TestRow
             key={test.test_id}
             test={test}
+            selections={selections}
             isExpanded={expandedTest === test.test_id}
             onToggle={() => setExpandedTest(expandedTest === test.test_id ? null : test.test_id)}
           />
@@ -255,26 +262,40 @@ function inferHigherIsBetter(unit) {
   return true // default higher is better
 }
 
-function TestRow({ test, isExpanded, onToggle }) {
-  const { test_name, min_value, max_value, p50, p25, p75, p90, p95, unit, percentile, sample_count } = test
-  const userValue = percentile?.user_value
-  // Use inferred value based on unit, fallback to database value
+function TestRow({ test, selections, isExpanded, onToggle }) {
+  const { test_name, min_value, max_value, p50, p25, p75, p90, p95, unit, sample_count } = test
+  const testSelections = test.selections || []
+
+  // Use inferred value based on unit
   const isHigherBetter = inferHigherIsBetter(unit)
 
-  // Calculate positions as percentages (flip for lower-is-better so right = better)
+  // Calculate positions for each selection
   const range = max_value - min_value
-  let userPosition = range > 0 ? ((userValue - min_value) / range) * 100 : 50
   let medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
 
   // For lower-is-better, flip positions so right = better (lower values)
   if (!isHigherBetter) {
-    userPosition = 100 - userPosition
     medianPosition = 100 - medianPosition
   }
 
   // Display values: left = worst, right = best
   const leftValue = isHigherBetter ? min_value : max_value
   const rightValue = isHigherBetter ? max_value : min_value
+
+  // Calculate marker positions for all selections
+  const selectionMarkers = testSelections.map(sel => {
+    const userValue = sel.percentile?.user_value
+    if (userValue === undefined) return null
+    let position = range > 0 ? ((userValue - min_value) / range) * 100 : 50
+    if (!isHigherBetter) {
+      position = 100 - position
+    }
+    return {
+      ...sel,
+      userValue,
+      position,
+    }
+  }).filter(Boolean)
 
   return (
     <div>
@@ -317,18 +338,25 @@ function TestRow({ test, isExpanded, onToggle }) {
               title={`Median: ${formatValue(p50)} ${unit}`}
             />
 
-            {/* User marker */}
-            {userValue !== undefined && (
+            {/* Selection markers - render all with their colors */}
+            {selectionMarkers.map((marker, index) => (
               <div
-                className="absolute top-1/2 -translate-y-1/2 z-20"
-                style={{ left: `${Math.min(Math.max(userPosition, 0), 100)}%` }}
-                title={`Selected: ${formatValue(userValue)} ${unit}`}
+                key={marker.id}
+                className="absolute top-1/2 -translate-y-1/2"
+                style={{
+                  left: `${Math.min(Math.max(marker.position, 0), 100)}%`,
+                  zIndex: 20 + index,
+                }}
+                title={`${marker.displayName}: ${formatValue(marker.userValue)} ${unit}`}
               >
                 <div className="relative -translate-x-1/2">
-                  <div className="w-2.5 h-2.5 bg-green-400 rounded-full border border-wb-bg-card shadow" />
+                  <div
+                    className="w-2.5 h-2.5 rounded-full border border-wb-bg-card shadow"
+                    style={{ backgroundColor: marker.color.hex }}
+                  />
                 </div>
               </div>
-            )}
+            ))}
           </div>
 
           <span className="text-[9px] text-wb-text-secondary w-10 shrink-0">
@@ -353,12 +381,21 @@ function TestRow({ test, isExpanded, onToggle }) {
             </div>
           )}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div>
-              <div className="text-wb-text-secondary text-[10px]">Selected</div>
-              <div className="text-green-400 font-medium">
-                {userValue !== undefined ? `${formatValue(userValue)} ${unit}` : '-'}
+            {/* Show all selections with their colors */}
+            {testSelections.map(sel => (
+              <div key={sel.id}>
+                <div className="text-wb-text-secondary text-[10px] flex items-center gap-1">
+                  <div
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: sel.color.hex }}
+                  />
+                  <span className="truncate">{sel.displayName}</span>
+                </div>
+                <div className="font-medium" style={{ color: sel.color.hex }}>
+                  {sel.percentile?.user_value !== undefined ? `${formatValue(sel.percentile.user_value)} ${unit}` : '-'}
+                </div>
               </div>
-            </div>
+            ))}
             <div>
               <div className="text-wb-text-secondary text-[10px]">Median (P50)</div>
               <div className="text-yellow-400 font-medium">{formatValue(p50)} {unit}</div>
