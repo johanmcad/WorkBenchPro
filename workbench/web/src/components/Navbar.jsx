@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Menu, X, Gauge, BarChart3, GitCompare, Download } from 'lucide-react'
+import { Menu, X, Gauge, BarChart3, Download } from 'lucide-react'
 import { useState } from 'react'
 
 export default function Navbar() {
@@ -8,8 +8,7 @@ export default function Navbar() {
 
   const links = [
     { path: '/', label: 'Home', icon: Gauge },
-    { path: '/results', label: 'Community Results', icon: BarChart3 },
-    { path: '/compare', label: 'Compare', icon: GitCompare },
+    { path: '/results', label: 'Results', icon: BarChart3 },
   ]
 
   const isActive = (path) => location.pathname === path
