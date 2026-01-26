@@ -51,10 +51,26 @@ export default function CompactComparisonChart({
   )
 }
 
+// Infer if higher is better based on unit
+function inferHigherIsBetter(unit) {
+  if (!unit) return true
+  const lowerUnit = unit.toLowerCase()
+  // Time/latency units - lower is better
+  if (['sec', 's', 'ms', 'μs', 'us', 'ns', 'seconds', 'milliseconds'].some(u => lowerUnit.includes(u))) {
+    return false
+  }
+  // Throughput/speed units - higher is better
+  if (['mb/s', 'gb/s', '/s', 'ops', 'files'].some(u => lowerUnit.includes(u))) {
+    return true
+  }
+  return true // default
+}
+
 function TestRow({ test, isExpanded, onToggle }) {
   const { test_name, min_value, max_value, p50, p25, p75, p90, p95, unit, percentile, sample_count } = test
   const userValue = percentile?.user_value
-  const isHigherBetter = percentile?.is_higher_better ?? true
+  // Use inferred value based on unit, fallback to database value
+  const isHigherBetter = inferHigherIsBetter(unit)
 
   // Check if we have a meaningful range
   const range = max_value - min_value
