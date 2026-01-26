@@ -56,10 +56,15 @@ function inferHigherIsBetter(unit) {
   if (!unit) return true
   const lowerUnit = unit.toLowerCase().trim()
 
-  // FIRST: Check for rate/throughput units (contain "/" indicating "per")
-  // Examples: files/sec, MB/s, operations/second, GB/s
-  // Must check BEFORE time units since rates contain time suffixes
+  // Check for units with "/" (rates)
   if (lowerUnit.includes('/')) {
+    const beforeSlash = lowerUnit.split('/')[0]
+    // If time unit is BEFORE the slash (like "ms/op", "sec/iter"), lower is better
+    // These measure "time per operation" - less time = better
+    if (['ms', 's', 'sec', 'μs', 'us', 'ns'].some(t => beforeSlash === t || beforeSlash.endsWith(t))) {
+      return false
+    }
+    // Otherwise it's "X per time" (like files/sec, MB/s) - higher is better
     return true
   }
 
