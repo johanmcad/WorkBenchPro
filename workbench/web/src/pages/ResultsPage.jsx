@@ -271,18 +271,6 @@ export default function ResultsPage() {
             {/* Summary Stats */}
             <div className="flex gap-6 mb-6 pb-6 border-b border-wb-border">
               <div>
-                <div className="text-2xl font-bold text-wb-accent">
-                  {overallStats.avgPercentile.toFixed(0)}%
-                </div>
-                <div className="text-xs text-wb-text-secondary">Avg Percentile</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-400">
-                  {overallStats.top25Count}
-                </div>
-                <div className="text-xs text-wb-text-secondary">Top 25%</div>
-              </div>
-              <div>
                 <div className="text-2xl font-bold text-white">
                   {overallStats.totalTests}
                 </div>
@@ -370,17 +358,5 @@ export default function ResultsPage() {
 }
 
 function calculateOverallStats(percentileRanks) {
-  if (!percentileRanks.length) {
-    return { avgPercentile: 0, top25Count: 0, totalTests: 0 }
-  }
-
-  const totalTests = percentileRanks.length
-  const avgPercentile =
-    percentileRanks.reduce((sum, p) => sum + p.percentile_rank, 0) / totalTests
-
-  const top25Count = percentileRanks.filter(
-    (p) => 100 - p.percentile_rank <= 25
-  ).length
-
-  return { avgPercentile, top25Count, totalTests }
+  return { totalTests: percentileRanks.length }
 }

@@ -1,5 +1,3 @@
-import { TrendingUp, TrendingDown } from 'lucide-react'
-
 export default function CompactComparisonChart({
   tests,
   title,
@@ -44,16 +42,12 @@ export default function CompactComparisonChart({
 function TestRow({ test }) {
   const { test_name, min_value, max_value, p50, unit, percentile } = test
   const userValue = percentile?.user_value
-  const percentileRank = percentile?.percentile_rank
   const isHigherBetter = percentile?.is_higher_better ?? true
 
   // Calculate positions as percentages
   const range = max_value - min_value
   const userPosition = range > 0 ? ((userValue - min_value) / range) * 100 : 50
   const medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
-
-  // Calculate top percent for badge
-  const topPercent = percentileRank !== undefined ? 100 - percentileRank : null
 
   return (
     <div className="flex items-center gap-3 group">
@@ -62,11 +56,13 @@ function TestRow({ test }) {
         <span className="text-xs truncate" title={test_name}>
           {test_name}
         </span>
-        {!isHigherBetter && (
-          <span className="text-[8px] text-yellow-400 bg-yellow-400/10 px-1 rounded shrink-0">
-            ↓
-          </span>
-        )}
+        <span className={`text-[8px] px-1 rounded shrink-0 ${
+          isHigherBetter
+            ? 'text-green-400 bg-green-400/10'
+            : 'text-yellow-400 bg-yellow-400/10'
+        }`}>
+          {isHigherBetter ? '↑ higher' : '↓ lower'}
+        </span>
       </div>
 
       {/* Range bar */}
@@ -111,52 +107,14 @@ function TestRow({ test }) {
         </span>
       </div>
 
-      {/* User value + Percentile */}
+      {/* User value */}
       <div className="flex items-center gap-2 shrink-0">
         {userValue !== undefined && (
           <span className="text-[10px] text-green-400 font-medium whitespace-nowrap">
             {formatValue(userValue)} {unit}
           </span>
         )}
-        {topPercent !== null && (
-          <PercentileBadge topPercent={topPercent} />
-        )}
       </div>
-    </div>
-  )
-}
-
-function PercentileBadge({ topPercent }) {
-  let bgColor, textColor, Icon
-
-  if (topPercent <= 10) {
-    bgColor = 'bg-green-500/20'
-    textColor = 'text-green-400'
-    Icon = TrendingUp
-  } else if (topPercent <= 25) {
-    bgColor = 'bg-green-500/15'
-    textColor = 'text-green-300'
-    Icon = TrendingUp
-  } else if (topPercent <= 50) {
-    bgColor = 'bg-yellow-500/15'
-    textColor = 'text-yellow-400'
-    Icon = TrendingUp
-  } else if (topPercent <= 75) {
-    bgColor = 'bg-orange-500/15'
-    textColor = 'text-orange-400'
-    Icon = TrendingDown
-  } else {
-    bgColor = 'bg-red-500/15'
-    textColor = 'text-red-400'
-    Icon = TrendingDown
-  }
-
-  return (
-    <div className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded ${bgColor} whitespace-nowrap`}>
-      <Icon size={10} className={`${textColor} shrink-0`} />
-      <span className={`text-[10px] font-medium ${textColor}`}>
-        {topPercent.toFixed(0)}%
-      </span>
     </div>
   )
 }
