@@ -1,5 +1,6 @@
 use egui::{CollapsingHeader, RichText, Ui};
 
+use crate::core::RunConfig;
 use crate::models::SystemInfo;
 use crate::ui::Theme;
 
@@ -267,6 +268,7 @@ impl HomeView {
     pub fn show_with_history(
         ui: &mut Ui,
         system_info: &SystemInfo,
+        run_config: &mut RunConfig,
     ) -> (bool, bool) {
         let mut run_clicked = false;
         let mut history_clicked = false;
@@ -275,7 +277,7 @@ impl HomeView {
             // Compact header - left aligned
             ui.horizontal(|ui| {
                 ui.label(
-                    RichText::new("WorkBench")
+                    RichText::new("WorkBench-Pro")
                         .size(Theme::SIZE_SECTION)
                         .strong()
                         .color(Theme::ACCENT),
@@ -405,6 +407,17 @@ impl HomeView {
                         Self::show_test_list(ui, "system_tools", &TestSpecs::system_tools());
                     });
                 });
+
+            ui.add_space(6.0);
+
+            // Options
+            ui.horizontal(|ui| {
+                ui.checkbox(
+                    &mut run_config.skip_synthetic,
+                    RichText::new("Skip synthetic benchmarks (run only real applications)")
+                        .size(Theme::SIZE_CAPTION),
+                );
+            });
 
             ui.add_space(6.0);
 

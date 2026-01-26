@@ -41,6 +41,13 @@ pub trait Benchmark: Send + Sync {
     /// Estimated duration in seconds
     fn estimated_duration_secs(&self) -> u32;
 
+    /// Whether this is a synthetic benchmark (algorithmic/microbenchmark)
+    /// vs a real-world application benchmark.
+    /// Default is false (real benchmark).
+    fn is_synthetic(&self) -> bool {
+        false
+    }
+
     /// Run the benchmark and return results
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult>;
 }

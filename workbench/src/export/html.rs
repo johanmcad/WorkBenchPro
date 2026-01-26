@@ -50,7 +50,7 @@ impl HtmlExporter {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WorkBench Report - {machine_name}</title>
+    <title>WorkBench-Pro Report - {machine_name}</title>
     <style>
         body {{
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
@@ -100,7 +100,7 @@ impl HtmlExporter {
     </style>
 </head>
 <body>
-    <h1>WorkBench Report</h1>
+    <h1>WorkBench-Pro Report</h1>
     <p>Machine: {machine_name} | Date: {timestamp}</p>
 
     <div class="summary-card">

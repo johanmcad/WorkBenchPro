@@ -16,7 +16,7 @@ pub struct SymlinkBenchmark {
 impl SymlinkBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_symlink_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_symlink_test"),
         }
     }
 

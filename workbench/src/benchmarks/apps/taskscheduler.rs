@@ -1,9 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Task Scheduler benchmark
@@ -16,7 +14,7 @@ impl TaskSchedulerBenchmark {
     }
 
     fn is_available() -> bool {
-        Command::new("schtasks")
+        system_command("schtasks.exe")
             .arg("/?")
             .output()
             .map(|o| o.status.success() || o.status.code() == Some(0))
@@ -71,7 +69,7 @@ impl Benchmark for TaskSchedulerBenchmark {
             }
 
             let timer = Timer::new();
-            let _ = Command::new("schtasks")
+            let _ = system_command("schtasks.exe")
                 .args(["/Query", "/FO", "LIST"])
                 .output();
             list_times.push(timer.elapsed_secs() * 1000.0);
@@ -98,7 +96,7 @@ impl Benchmark for TaskSchedulerBenchmark {
 
             for folder in &task_folders {
                 let timer = Timer::new();
-                let _ = Command::new("schtasks")
+                let _ = system_command("schtasks.exe")
                     .args(["/Query", "/TN", folder, "/FO", "LIST"])
                     .output();
                 query_times.push(timer.elapsed_secs() * 1000.0);
@@ -119,7 +117,7 @@ impl Benchmark for TaskSchedulerBenchmark {
             }
 
             let timer = Timer::new();
-            let _ = Command::new("schtasks")
+            let _ = system_command("schtasks.exe")
                 .args(["/Query", "/FO", "LIST", "/V"])
                 .output();
             verbose_times.push(timer.elapsed_secs() * 1000.0);

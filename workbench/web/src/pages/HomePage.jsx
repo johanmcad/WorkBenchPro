@@ -140,7 +140,7 @@ export default function HomePage() {
               Built for Developers
             </h2>
             <p className="text-wb-text-secondary text-lg max-w-2xl mx-auto">
-              Unlike generic benchmarks, WorkBench focuses on the operations that matter
+              Unlike generic benchmarks, WorkBench-Pro focuses on the operations that matter
               for your daily development workflow.
             </p>
           </div>
@@ -188,14 +188,14 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="card max-w-3xl mx-auto text-center">
             <Download className="mx-auto text-wb-accent-light mb-6" size={48} />
-            <h2 className="text-3xl font-bold mb-4">Download WorkBench</h2>
+            <h2 className="text-3xl font-bold mb-4">Download WorkBench-Pro</h2>
             <p className="text-wb-text-secondary mb-8">
               Available for Windows 10/11. No installation required - just download and run.
             </p>
 
             <div className="space-y-4">
               <a
-                href="https://github.com/johanmcad/WorkBenchPro/releases/latest/download/workbench.exe"
+                href="https://github.com/johanmcad/WorkBenchPro/releases/latest/download/workbench-pro.exe"
                 className="btn-primary inline-flex items-center gap-2 text-lg"
               >
                 <Download size={20} />

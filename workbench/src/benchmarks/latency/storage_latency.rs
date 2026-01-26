@@ -18,7 +18,7 @@ pub struct StorageLatencyBenchmark {
 impl StorageLatencyBenchmark {
     pub fn new() -> Self {
         Self {
-            test_file: std::env::temp_dir().join("workbench_latency_test.bin"),
+            test_file: std::env::temp_dir().join("workbench_pro_latency_test.bin"),
         }
     }
 
@@ -83,6 +83,10 @@ impl Benchmark for StorageLatencyBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         120
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

@@ -9,12 +9,12 @@ fn main() {
         // Version info
         res.set("FileVersion", "1.0.0.0");
         res.set("ProductVersion", "1.0.0.0");
-        res.set("ProductName", "WorkBench");
-        res.set("FileDescription", "Developer Workstation Benchmark");
+        res.set("ProductName", "WorkBench-Pro");
+        res.set("FileDescription", "WorkBench-Pro - Developer Workstation Benchmark");
         res.set("LegalCopyright", "Copyright © 2025");
-        res.set("CompanyName", "WorkBench");
-        res.set("InternalName", "workbench");
-        res.set("OriginalFilename", "workbench.exe");
+        res.set("CompanyName", "WorkBench-Pro");
+        res.set("InternalName", "workbench-pro");
+        res.set("OriginalFilename", "workbench-pro.exe");
 
         // Compile the resource
         if let Err(e) = res.compile() {

@@ -5,7 +5,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Archive operations benchmark - tests real archive compress/extract performance
@@ -16,13 +16,14 @@ pub struct ArchiveOpsBenchmark {
 impl ArchiveOpsBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_archive_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_archive_test"),
         }
     }
 
     fn is_tar_available() -> bool {
         Command::new("tar")
             .arg("--version")
+            .hidden()
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -154,6 +155,7 @@ impl Benchmark for ArchiveOpsBenchmark {
             let timer = Timer::new();
             let output = Command::new("tar")
                 .args(["-czf", archive_path.to_str().unwrap(), "-C", source_dir.to_str().unwrap(), "."])
+                .hidden()
                 .output()?;
 
             if !output.status.success() {
@@ -173,6 +175,7 @@ impl Benchmark for ArchiveOpsBenchmark {
             let timer = Timer::new();
             let output = Command::new("tar")
                 .args(["-xzf", archive_path.to_str().unwrap(), "-C", extract_dir.to_str().unwrap()])
+                .hidden()
                 .output()?;
 
             if !output.status.success() {

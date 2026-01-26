@@ -1,5 +1,6 @@
 mod applaunch;
 mod archive_ops;
+mod compression;
 mod csharp_compile;
 mod defender;
 mod environment;
@@ -17,6 +18,7 @@ mod wmic;
 
 pub use applaunch::AppLaunchBenchmark;
 pub use archive_ops::ArchiveOpsBenchmark;
+pub use compression::WindowsCompressionBenchmark;
 pub use csharp_compile::CSharpCompileBenchmark;
 pub use defender::DefenderImpactBenchmark;
 pub use environment::EnvironmentBenchmark;

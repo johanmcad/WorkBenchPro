@@ -1,9 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Registry operations benchmark
@@ -16,7 +14,7 @@ impl RegistryBenchmark {
     }
 
     fn is_available() -> bool {
-        Command::new("reg")
+        system_command("reg.exe")
             .arg("/?")
             .output()
             .map(|o| o.status.success() || o.status.code() == Some(1))
@@ -93,7 +91,7 @@ impl Benchmark for RegistryBenchmark {
 
             for (key, value) in &registry_queries {
                 let timer = Timer::new();
-                let _ = Command::new("reg")
+                let _ = system_command("reg.exe")
                     .args(["query", key, "/v", value])
                     .output();
                 query_times.push(timer.elapsed_secs() * 1000.0);
@@ -121,7 +119,7 @@ impl Benchmark for RegistryBenchmark {
 
             for key in &enum_keys {
                 let timer = Timer::new();
-                let _ = Command::new("reg")
+                let _ = system_command("reg.exe")
                     .args(["query", key])
                     .output();
                 enum_times.push(timer.elapsed_secs() * 1000.0);

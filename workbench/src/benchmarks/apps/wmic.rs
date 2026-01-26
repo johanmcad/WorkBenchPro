@@ -1,9 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// WMIC/System Information benchmark
@@ -17,7 +15,7 @@ impl WmicBenchmark {
 
     fn is_available() -> bool {
         // Try wmic first, fall back to PowerShell Get-WmiObject
-        Command::new("wmic")
+        system_command("wmic.exe")
             .arg("os")
             .arg("get")
             .arg("caption")
@@ -85,7 +83,7 @@ impl Benchmark for WmicBenchmark {
 
             for (class, fields) in &wmic_queries {
                 let timer = Timer::new();
-                let _ = Command::new("wmic")
+                let _ = system_command("wmic.exe")
                     .args([class, "get", fields, "/format:list"])
                     .output();
                 query_times.push(timer.elapsed_secs() * 1000.0);
@@ -106,7 +104,7 @@ impl Benchmark for WmicBenchmark {
             }
 
             let timer = Timer::new();
-            let _ = Command::new("wmic")
+            let _ = system_command("wmic.exe")
                 .args(["process", "get", "name,processid,workingsetsize", "/format:list"])
                 .output();
             list_times.push(timer.elapsed_secs() * 1000.0);

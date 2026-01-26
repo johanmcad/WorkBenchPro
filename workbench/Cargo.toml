@@ -1,8 +1,8 @@
 [package]
-name = "workbench"
+name = "workbench-pro"
 version = "1.0.0"
 edition = "2021"
-description = "Workstation Benchmark - Developer productivity measurement"
+description = "WorkBench-Pro - Developer Workstation Benchmark"
 license = "MIT"
 
 [dependencies]

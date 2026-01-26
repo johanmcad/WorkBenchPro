@@ -16,7 +16,7 @@ pub struct TraversalBenchmark {
 impl TraversalBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_traversal"),
+            test_dir: std::env::temp_dir().join("workbench_pro_traversal"),
         }
     }
 
@@ -117,6 +117,10 @@ impl Benchmark for TraversalBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         45
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

@@ -23,7 +23,7 @@ export default function Navbar() {
             <div className="w-9 h-9 bg-wb-accent rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">W</span>
             </div>
-            <span className="font-semibold text-xl hidden sm:block">WorkBench</span>
+            <span className="font-semibold text-xl hidden sm:block">WorkBench-Pro</span>
           </Link>
 
           {/* Desktop Nav */}

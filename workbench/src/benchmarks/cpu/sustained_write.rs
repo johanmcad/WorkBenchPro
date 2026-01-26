@@ -18,7 +18,7 @@ pub struct SustainedWriteBenchmark {
 impl SustainedWriteBenchmark {
     pub fn new() -> Self {
         Self {
-            test_file: std::env::temp_dir().join("workbench_sustained_write.bin"),
+            test_file: std::env::temp_dir().join("workbench_pro_sustained_write.bin"),
         }
     }
 
@@ -52,6 +52,10 @@ impl Benchmark for SustainedWriteBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         60
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

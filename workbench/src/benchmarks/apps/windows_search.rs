@@ -5,7 +5,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Search / File indexing benchmark
@@ -17,7 +17,7 @@ pub struct WindowsSearchBenchmark {
 impl WindowsSearchBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_search_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_search_test"),
         }
     }
 
@@ -155,7 +155,7 @@ impl Benchmark for WindowsSearchBenchmark {
             let timer = Timer::new();
             if is_windows {
                 // Windows: use dir /s /b
-                let _ = Command::new("cmd")
+                let _ = system_command("cmd.exe")
                     .args(["/c", "dir", "/s", "/b"])
                     .current_dir(&self.test_dir)
                     .arg(&format!("*{}*", pattern))
@@ -187,7 +187,7 @@ impl Benchmark for WindowsSearchBenchmark {
             let timer = Timer::new();
             if is_windows {
                 // Windows: use findstr /s /i
-                let _ = Command::new("findstr")
+                let _ = system_command("findstr.exe")
                     .args(["/s", "/i", pattern])
                     .arg(self.test_dir.join("*").to_str().unwrap())
                     .output();
@@ -212,7 +212,7 @@ impl Benchmark for WindowsSearchBenchmark {
 
             let timer = Timer::new();
             if is_windows {
-                let _ = Command::new("cmd")
+                let _ = system_command("cmd.exe")
                     .args(["/c", "dir", "/s", "/b"])
                     .current_dir(&self.test_dir)
                     .output();

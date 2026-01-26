@@ -16,7 +16,7 @@ pub struct FileEnumerationBenchmark {
 impl FileEnumerationBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_file_enum"),
+            test_dir: std::env::temp_dir().join("workbench_pro_file_enum"),
         }
     }
 
@@ -111,6 +111,10 @@ impl Benchmark for FileEnumerationBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         30
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

@@ -42,6 +42,10 @@ impl Benchmark for MemoryBandwidthBenchmark {
         15
     }
 
+    fn is_synthetic(&self) -> bool {
+        true
+    }
+
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
         let num_threads = rayon::current_num_threads();
         // Use 256MB per thread, minimum 1GB total

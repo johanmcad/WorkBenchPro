@@ -17,7 +17,7 @@ pub struct LargeFileReadBenchmark {
 impl LargeFileReadBenchmark {
     pub fn new() -> Self {
         Self {
-            test_file: std::env::temp_dir().join("workbench_large_file.bin"),
+            test_file: std::env::temp_dir().join("workbench_pro_large_file.bin"),
         }
     }
 
@@ -105,6 +105,10 @@ impl Benchmark for LargeFileReadBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         90
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

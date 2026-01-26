@@ -1,9 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Services benchmark
@@ -16,7 +14,7 @@ impl ServicesBenchmark {
     }
 
     fn is_available() -> bool {
-        Command::new("sc")
+        system_command("sc.exe")
             .arg("query")
             .output()
             .map(|o| o.status.success())
@@ -83,7 +81,7 @@ impl Benchmark for ServicesBenchmark {
             }
 
             let timer = Timer::new();
-            let _ = Command::new("sc")
+            let _ = system_command("sc.exe")
                 .args(["query", "type=", "service", "state=", "all"])
                 .output();
             query_all_times.push(timer.elapsed_secs() * 1000.0);
@@ -104,7 +102,7 @@ impl Benchmark for ServicesBenchmark {
 
             for service in &services {
                 let timer = Timer::new();
-                let _ = Command::new("sc")
+                let _ = system_command("sc.exe")
                     .args(["query", service])
                     .output();
                 query_specific_times.push(timer.elapsed_secs() * 1000.0);
@@ -126,7 +124,7 @@ impl Benchmark for ServicesBenchmark {
 
             for service in &services[..4] {
                 let timer = Timer::new();
-                let _ = Command::new("sc")
+                let _ = system_command("sc.exe")
                     .args(["qc", service])
                     .output();
                 query_config_times.push(timer.elapsed_secs() * 1000.0);

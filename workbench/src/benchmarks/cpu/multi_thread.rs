@@ -47,6 +47,10 @@ impl Benchmark for MultiThreadBenchmark {
         45
     }
 
+    fn is_synthetic(&self) -> bool {
+        true
+    }
+
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
         let chunk_size: usize = 64 * 1024; // 64KB chunks
         let num_threads = rayon::current_num_threads();

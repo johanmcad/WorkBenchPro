@@ -34,7 +34,7 @@ impl HistoryStorage {
                 .unwrap_or_else(std::env::temp_dir)
         };
 
-        base.join("WorkBench").join("history")
+        base.join("WorkBench-Pro").join("history")
     }
 
     /// Ensure storage directory exists

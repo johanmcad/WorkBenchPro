@@ -16,7 +16,7 @@ pub struct DefenderImpactBenchmark {
 impl DefenderImpactBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_defender_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_defender_test"),
         }
     }
 

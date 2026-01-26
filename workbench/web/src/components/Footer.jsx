@@ -10,13 +10,13 @@ export default function Footer() {
               <span className="text-white font-bold">W</span>
             </div>
             <span className="text-wb-text-secondary">
-              WorkBench - Developer Workstation Benchmark
+              WorkBench-Pro - Developer Workstation Benchmark
             </span>
           </div>
 
           <div className="flex items-center gap-6">
             <a
-              href="https://github.com/johanmcad/workbench"
+              href="https://github.com/johanmcad/WorkBenchPro"
               target="_blank"
               rel="noopener noreferrer"
               className="text-wb-text-secondary hover:text-white transition-colors"

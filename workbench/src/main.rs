@@ -63,7 +63,7 @@ fn setup_swiftshader() {
 
 /// Get directory for SwiftShader files (always uses %TEMP%)
 fn get_swiftshader_dir() -> PathBuf {
-    std::env::temp_dir().join("workbench_swiftshader")
+    std::env::temp_dir().join("workbench_pro_swiftshader")
 }
 
 fn main() -> Result<()> {
@@ -71,7 +71,7 @@ fn main() -> Result<()> {
     setup_swiftshader();
 
     // Check environment variable to force a specific renderer
-    let use_glow = std::env::var("WORKBENCH_RENDERER")
+    let use_glow = std::env::var("WORKBENCH_PRO_RENDERER")
         .map(|v| {
             v.to_lowercase() == "glow"
                 || v.to_lowercase() == "gl"
@@ -89,7 +89,7 @@ fn main() -> Result<()> {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1024.0, 768.0])
             .with_min_inner_size([800.0, 600.0])
-            .with_title("WorkBench - Developer Workstation Benchmark"),
+            .with_title("WorkBench-Pro - Developer Workstation Benchmark"),
         renderer,
         wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
             #[cfg(windows)]
@@ -100,7 +100,7 @@ fn main() -> Result<()> {
             supported_backends: eframe::wgpu::Backends::all(),
             power_preference: eframe::wgpu::PowerPreference::None,
             device_descriptor: std::sync::Arc::new(|_adapter| eframe::wgpu::DeviceDescriptor {
-                label: Some("WorkBench Device"),
+                label: Some("WorkBench-Pro Device"),
                 required_features: eframe::wgpu::Features::empty(),
                 required_limits: eframe::wgpu::Limits::downlevel_webgl2_defaults(),
                 memory_hints: Default::default(),
@@ -111,11 +111,11 @@ fn main() -> Result<()> {
     };
 
     eframe::run_native(
-        "WorkBench",
+        "WorkBench-Pro",
         options,
         Box::new(|cc| {
             crate::ui::Theme::apply(&cc.egui_ctx);
-            Ok(Box::new(app::WorkBenchApp::new(cc)))
+            Ok(Box::new(app::WorkBenchProApp::new(cc)))
         }),
     )
     .map_err(|e| anyhow::anyhow!("Failed to run application: {}", e))

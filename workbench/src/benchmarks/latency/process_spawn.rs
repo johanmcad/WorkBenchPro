@@ -3,7 +3,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system32_path, CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Process spawn time benchmark
@@ -17,8 +17,9 @@ impl ProcessSpawnBenchmark {
 
     #[cfg(windows)]
     fn spawn_command() -> Command {
-        let mut cmd = Command::new("cmd.exe");
+        let mut cmd = Command::new(system32_path("cmd.exe"));
         cmd.args(["/C", "echo test"]);
+        cmd.hidden();
         cmd
     }
 
@@ -55,6 +56,10 @@ impl Benchmark for ProcessSpawnBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         30
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

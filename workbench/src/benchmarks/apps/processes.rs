@@ -3,7 +3,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Process Management benchmark
@@ -62,7 +62,7 @@ impl Benchmark for ProcessesBenchmark {
 
             let timer = Timer::new();
             if is_windows {
-                let _ = Command::new("tasklist")
+                let _ = system_command("tasklist.exe")
                     .output();
             } else {
                 let _ = Command::new("ps")
@@ -87,7 +87,7 @@ impl Benchmark for ProcessesBenchmark {
 
             let timer = Timer::new();
             if is_windows {
-                let _ = Command::new("tasklist")
+                let _ = system_command("tasklist.exe")
                     .args(["/V", "/FO", "LIST"])
                     .output();
             } else {

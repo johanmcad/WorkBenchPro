@@ -6,7 +6,7 @@ use std::time::Duration;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, system32_path, CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Application Launch benchmark
@@ -18,7 +18,7 @@ pub struct AppLaunchBenchmark {
 impl AppLaunchBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_applaunch_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_applaunch_test"),
         }
     }
 
@@ -30,8 +30,8 @@ impl AppLaunchBenchmark {
     #[cfg(windows)]
     fn kill_calculator() {
         // Windows 10+ Calculator is a UWP app
-        let _ = Command::new("taskkill").args(["/F", "/IM", "CalculatorApp.exe"]).output();
-        let _ = Command::new("taskkill").args(["/F", "/IM", "calc.exe"]).output();
+        let _ = system_command("taskkill.exe").args(["/F", "/IM", "CalculatorApp.exe"]).output();
+        let _ = system_command("taskkill.exe").args(["/F", "/IM", "calc.exe"]).output();
     }
 
     #[cfg(not(windows))]
@@ -47,9 +47,9 @@ impl AppLaunchBenchmark {
     /// Get list of apps to test based on platform
     fn get_test_apps() -> Vec<(&'static str, Vec<&'static str>)> {
         if cfg!(target_os = "windows") {
+            // Note: WordPad (write.exe) removed as it's been deprecated in Windows 11
             vec![
                 ("notepad", vec!["notepad.exe"]),
-                ("wordpad", vec!["write.exe"]),  // WordPad executable name
                 ("calc", vec!["calc.exe"]),
                 ("mspaint", vec!["mspaint.exe"]),
                 ("cmd", vec!["cmd.exe", "/c", "echo", "test"]),
@@ -102,7 +102,7 @@ impl Benchmark for AppLaunchBenchmark {
 
         // Create a test file for editors to open
         let test_file = self.test_dir.join("test.txt");
-        fs::write(&test_file, "WorkBench test file\nLine 2\nLine 3\n")?;
+        fs::write(&test_file, "WorkBench-Pro test file\nLine 2\nLine 3\n")?;
 
         let apps = Self::get_test_apps();
         let mut all_times: Vec<f64> = Vec::new();
@@ -134,33 +134,34 @@ impl Benchmark for AppLaunchBenchmark {
 
                 if is_windows {
                     // On Windows, launch app and immediately close it
-                    let cmd_name = args[0];
+                    // Use system32_path to get full path for system executables
+                    let cmd_path = system32_path(args[0]);
 
                     // Special handling for different apps
                     match *app_name {
-                        "notepad" | "wordpad" | "mspaint" => {
-                            // Launch and kill after a brief moment
-                            let mut child = Command::new(cmd_name)
+                        "notepad" | "mspaint" => {
+                            // Launch GUI app and kill after window appears
+                            let child = Command::new(&cmd_path)
                                 .arg(test_file.to_str().unwrap_or(""))
                                 .spawn();
 
-                            if let Ok(ref mut c) = child {
-                                // Wait a moment for startup
-                                std::thread::sleep(Duration::from_millis(100));
+                            if let Ok(mut c) = child {
+                                // Wait for app window to appear (300ms should be enough)
+                                std::thread::sleep(Duration::from_millis(300));
                                 let _ = c.kill();
                                 let _ = c.wait();
                                 // Also use taskkill as fallback to ensure process is terminated
-                                let _ = Command::new("taskkill")
-                                    .args(["/F", "/IM", cmd_name])
+                                let _ = system_command("taskkill.exe")
+                                    .args(["/F", "/IM", args[0]])
                                     .output();
                             }
                         }
                         "calc" => {
                             // Calculator on Windows 10+ is a UWP app (CalculatorApp.exe)
                             // The calc.exe just launches it and exits
-                            let mut child = Command::new(cmd_name).spawn();
-                            if let Ok(ref mut c) = child {
-                                std::thread::sleep(Duration::from_millis(100));
+                            let child = Command::new(&cmd_path).spawn();
+                            if let Ok(mut c) = child {
+                                std::thread::sleep(Duration::from_millis(500));
                                 let _ = c.kill();
                                 let _ = c.wait();
                             }
@@ -169,13 +170,16 @@ impl Benchmark for AppLaunchBenchmark {
                         }
                         "cmd" => {
                             // Command prompt with echo - runs and exits
-                            let _ = Command::new(args[0])
+                            // Use hidden() to suppress console window
+                            let _ = Command::new(&cmd_path)
                                 .args(&args[1..])
+                                .hidden()
                                 .output();
                         }
                         _ => {
-                            let _ = Command::new(args[0])
+                            let _ = Command::new(&cmd_path)
                                 .args(&args[1..])
+                                .hidden()
                                 .output();
                         }
                     }

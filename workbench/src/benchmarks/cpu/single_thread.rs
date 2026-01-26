@@ -43,6 +43,10 @@ impl Benchmark for SingleThreadBenchmark {
         30
     }
 
+    fn is_synthetic(&self) -> bool {
+        true
+    }
+
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
         let chunk_size: usize = 64 * 1024; // 64KB chunks
         let total_data: usize = 256 * 1024 * 1024; // 256MB total

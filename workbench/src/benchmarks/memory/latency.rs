@@ -42,6 +42,10 @@ impl Benchmark for MemoryLatencyBenchmark {
         20
     }
 
+    fn is_synthetic(&self) -> bool {
+        true
+    }
+
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
         // Use a buffer larger than typical L3 cache to measure main memory latency
         // 64MB buffer with 64-byte cache line sized elements

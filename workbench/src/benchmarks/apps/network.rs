@@ -3,7 +3,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Network operations benchmark
@@ -71,7 +71,7 @@ impl Benchmark for NetworkBenchmark {
             for host in &hostnames {
                 let timer = Timer::new();
                 if is_windows {
-                    let _ = Command::new("nslookup")
+                    let _ = system_command("nslookup.exe")
                         .arg(host)
                         .output();
                 } else {
@@ -98,7 +98,7 @@ impl Benchmark for NetworkBenchmark {
 
             let timer = Timer::new();
             if is_windows {
-                let _ = Command::new("ipconfig")
+                let _ = system_command("ipconfig.exe")
                     .arg("/all")
                     .output();
             } else {
@@ -124,7 +124,7 @@ impl Benchmark for NetworkBenchmark {
 
             let timer = Timer::new();
             if is_windows {
-                let _ = Command::new("route")
+                let _ = system_command("route.exe")
                     .arg("print")
                     .output();
             } else {

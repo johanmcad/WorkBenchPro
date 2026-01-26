@@ -17,7 +17,7 @@ pub struct RandomReadBenchmark {
 impl RandomReadBenchmark {
     pub fn new() -> Self {
         Self {
-            test_file: std::env::temp_dir().join("workbench_random_read.bin"),
+            test_file: std::env::temp_dir().join("workbench_pro_random_read.bin"),
         }
     }
 
@@ -83,6 +83,10 @@ impl Benchmark for RandomReadBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         60
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

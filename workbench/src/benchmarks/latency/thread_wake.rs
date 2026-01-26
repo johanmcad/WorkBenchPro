@@ -45,6 +45,10 @@ impl Benchmark for ThreadWakeBenchmark {
         10
     }
 
+    fn is_synthetic(&self) -> bool {
+        true
+    }
+
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
         let num_wakes: usize = 1000;
         let mut wake_times_us: Vec<f64> = Vec::with_capacity(num_wakes);

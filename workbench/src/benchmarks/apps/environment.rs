@@ -4,7 +4,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Environment Variables benchmark
@@ -103,7 +103,7 @@ impl Benchmark for EnvironmentBenchmark {
             let timer = Timer::new();
             if is_windows {
                 // Use SET command to display environment
-                let _ = Command::new("cmd")
+                let _ = system_command("cmd.exe")
                     .args(["/c", "set"])
                     .output();
             } else {

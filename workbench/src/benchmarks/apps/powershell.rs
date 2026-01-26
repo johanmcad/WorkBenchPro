@@ -5,7 +5,7 @@ use std::process::Command;
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// PowerShell benchmark - tests PowerShell script execution performance
@@ -17,7 +17,7 @@ pub struct PowerShellBenchmark {
 impl PowerShellBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_powershell_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_powershell_test"),
         }
     }
 
@@ -25,12 +25,14 @@ impl PowerShellBenchmark {
         // Try pwsh (PowerShell Core) first, then powershell (Windows PowerShell)
         Command::new("pwsh")
             .arg("--version")
+            .hidden()
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
             || Command::new("powershell")
                 .arg("-Command")
                 .arg("$PSVersionTable.PSVersion")
+                .hidden()
                 .output()
                 .map(|o| o.status.success())
                 .unwrap_or(false)
@@ -40,6 +42,7 @@ impl PowerShellBenchmark {
         // Prefer pwsh (PowerShell Core) if available
         if Command::new("pwsh")
             .arg("--version")
+            .hidden()
             .output()
             .map(|o| o.status.success())
             .unwrap_or(false)
@@ -209,6 +212,7 @@ impl Benchmark for PowerShellBenchmark {
                         "-File",
                         script_path.to_str().unwrap(),
                     ])
+                    .hidden()
                     .output()?;
 
                 let elapsed = timer.elapsed_secs() * 1000.0; // Convert to ms

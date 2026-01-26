@@ -33,6 +33,9 @@ pub enum BenchmarkMessage {
 #[derive(Debug, Clone, Default)]
 pub struct RunConfig {
     pub machine_name: String,
+    /// Skip synthetic benchmarks (CPU, disk, latency, memory microbenchmarks)
+    /// and only run real application benchmarks
+    pub skip_synthetic: bool,
 }
 
 /// Runs benchmarks in a background thread

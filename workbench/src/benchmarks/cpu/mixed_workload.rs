@@ -20,7 +20,7 @@ pub struct MixedWorkloadBenchmark {
 impl MixedWorkloadBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_mixed_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_mixed_test"),
         }
     }
 
@@ -96,6 +96,10 @@ impl Benchmark for MixedWorkloadBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         60
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {

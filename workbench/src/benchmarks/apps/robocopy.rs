@@ -1,11 +1,10 @@
 use std::fs;
 use std::path::PathBuf;
-use std::process::Command;
 
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Robocopy benchmark - tests Windows robust file copy performance
@@ -17,14 +16,14 @@ pub struct RobocopyBenchmark {
 impl RobocopyBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_robocopy_test"),
+            test_dir: std::env::temp_dir().join("workbench_pro_robocopy_test"),
         }
     }
 
     fn is_robocopy_available() -> bool {
         // Just check if robocopy can be executed - any output means it exists
         // robocopy /? returns exit code 16 but still produces help output
-        Command::new("robocopy")
+        system_command("robocopy.exe")
             .arg("/?")
             .output()
             .map(|o| !o.stdout.is_empty() || !o.stderr.is_empty())
@@ -153,7 +152,7 @@ impl Benchmark for RobocopyBenchmark {
 
             // Test 1: Standard copy with /E (recursive)
             let timer = Timer::new();
-            let output = Command::new("robocopy")
+            let output = system_command("robocopy.exe")
                 .args([
                     source_dir.to_str().unwrap(),
                     dest_copy.to_str().unwrap(),
@@ -183,7 +182,7 @@ impl Benchmark for RobocopyBenchmark {
 
             // Test 2: Mirror copy with /MIR
             let timer = Timer::new();
-            let output = Command::new("robocopy")
+            let output = system_command("robocopy.exe")
                 .args([
                     source_dir.to_str().unwrap(),
                     dest_mirror.to_str().unwrap(),

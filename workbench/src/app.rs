@@ -6,7 +6,7 @@ use crate::benchmarks::apps::{
     AppLaunchBenchmark, ArchiveOpsBenchmark, CSharpCompileBenchmark, DefenderImpactBenchmark,
     EnvironmentBenchmark, EventLogBenchmark, NetworkBenchmark, PowerShellBenchmark,
     ProcessesBenchmark, RegistryBenchmark, RobocopyBenchmark, ServicesBenchmark, SymlinkBenchmark,
-    TaskSchedulerBenchmark, WindowsSearchBenchmark, WmicBenchmark,
+    TaskSchedulerBenchmark, WindowsCompressionBenchmark, WindowsSearchBenchmark, WmicBenchmark,
 };
 use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
@@ -45,7 +45,7 @@ enum AppState {
 }
 
 /// Main application
-pub struct WorkBenchApp {
+pub struct WorkBenchProApp {
     state: AppState,
     system_info: SystemInfo,
     run_config: RunConfig,
@@ -83,7 +83,7 @@ pub struct WorkBenchApp {
     upload_run_index: Option<usize>, // Index of run being uploaded (None = last_run)
 }
 
-impl WorkBenchApp {
+impl WorkBenchProApp {
     pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
         // Apply theme
         Theme::apply(&cc.egui_ctx);
@@ -100,7 +100,7 @@ impl WorkBenchApp {
         Self {
             state: AppState::Home,
             system_info,
-            run_config: RunConfig { machine_name: machine_name.clone() },
+            run_config: RunConfig { machine_name: machine_name.clone(), skip_synthetic: false },
             runner: BenchmarkRunner::new(),
             receiver: None,
             overall_progress: 0.0,
@@ -130,7 +130,7 @@ impl WorkBenchApp {
 
     fn start_benchmark(&mut self) {
         // Create benchmark instances
-        let benchmarks: Vec<Box<dyn Benchmark>> = vec![
+        let all_benchmarks: Vec<Box<dyn Benchmark>> = vec![
             // Project Operations (disk + file operations)
             Box::new(FileEnumerationBenchmark::new()),
             Box::new(RandomReadBenchmark::new()),
@@ -147,6 +147,7 @@ impl WorkBenchApp {
             Box::new(SustainedWriteBenchmark::new()),
             Box::new(CSharpCompileBenchmark::new()),
             Box::new(ArchiveOpsBenchmark::new()),
+            Box::new(WindowsCompressionBenchmark::new()),
             Box::new(PowerShellBenchmark::new()),
             // Responsiveness (latency + memory benchmarks)
             Box::new(StorageLatencyBenchmark::new()),
@@ -166,6 +167,16 @@ impl WorkBenchApp {
             Box::new(SymlinkBenchmark::new()),
             Box::new(EnvironmentBenchmark::new()),
         ];
+
+        // Filter out synthetic benchmarks if requested
+        let benchmarks: Vec<Box<dyn Benchmark>> = if self.run_config.skip_synthetic {
+            all_benchmarks
+                .into_iter()
+                .filter(|b| !b.is_synthetic())
+                .collect()
+        } else {
+            all_benchmarks
+        };
 
         // Reset running state
         self.overall_progress = 0.0;
@@ -245,7 +256,7 @@ impl WorkBenchApp {
     fn export_results(&self) {
         if let Some(run) = &self.last_run {
             let path = std::env::temp_dir().join(format!(
-                "workbench_results_{}.json",
+                "workbench_pro_results_{}.json",
                 run.timestamp.format("%Y%m%d_%H%M%S")
             ));
 
@@ -368,7 +379,7 @@ impl WorkBenchApp {
     }
 }
 
-impl eframe::App for WorkBenchApp {
+impl eframe::App for WorkBenchProApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Process any pending messages from the benchmark runner
         self.process_messages();
@@ -388,7 +399,7 @@ impl eframe::App for WorkBenchApp {
             match &self.state {
                 AppState::Home => {
                     let (start, history) =
-                        HomeView::show_with_history(ui, &self.system_info);
+                        HomeView::show_with_history(ui, &self.system_info, &mut self.run_config);
                     action_start = start;
                     action_history = history;
                 }

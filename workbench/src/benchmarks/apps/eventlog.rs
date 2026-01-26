@@ -1,9 +1,7 @@
-use std::process::Command;
-
 use anyhow::Result;
 
 use crate::benchmarks::{Benchmark, Category, ProgressCallback};
-use crate::core::Timer;
+use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
 /// Windows Event Log benchmark
@@ -16,7 +14,7 @@ impl EventLogBenchmark {
     }
 
     fn is_available() -> bool {
-        Command::new("wevtutil")
+        system_command("wevtutil.exe")
             .arg("/?")
             .output()
             .map(|o| o.status.success() || o.status.code() == Some(1))
@@ -79,7 +77,7 @@ impl Benchmark for EventLogBenchmark {
             }
 
             let timer = Timer::new();
-            let _ = Command::new("wevtutil")
+            let _ = system_command("wevtutil.exe")
                 .args(["el"])  // enumerate logs
                 .output();
             list_times.push(timer.elapsed_secs() * 1000.0);
@@ -100,7 +98,7 @@ impl Benchmark for EventLogBenchmark {
 
             for log in &event_logs {
                 let timer = Timer::new();
-                let _ = Command::new("wevtutil")
+                let _ = system_command("wevtutil.exe")
                     .args(["gli", log])  // get log info
                     .output();
                 info_times.push(timer.elapsed_secs() * 1000.0);
@@ -122,7 +120,7 @@ impl Benchmark for EventLogBenchmark {
 
             for log in &event_logs[..2] {  // Only System and Application
                 let timer = Timer::new();
-                let _ = Command::new("wevtutil")
+                let _ = system_command("wevtutil.exe")
                     .args([
                         "qe",           // query events
                         log,

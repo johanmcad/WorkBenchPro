@@ -16,7 +16,7 @@ pub struct MetadataOpsBenchmark {
 impl MetadataOpsBenchmark {
     pub fn new() -> Self {
         Self {
-            test_dir: std::env::temp_dir().join("workbench_metadata_ops"),
+            test_dir: std::env::temp_dir().join("workbench_pro_metadata_ops"),
         }
     }
 
@@ -50,6 +50,10 @@ impl Benchmark for MetadataOpsBenchmark {
 
     fn estimated_duration_secs(&self) -> u32 {
         30
+    }
+
+    fn is_synthetic(&self) -> bool {
+        true
     }
 
     fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
