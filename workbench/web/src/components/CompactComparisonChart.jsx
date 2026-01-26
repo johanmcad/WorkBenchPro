@@ -59,6 +59,10 @@ function inferHigherIsBetter(unit) {
   if (['sec', 's', 'ms', 'μs', 'us', 'ns', 'seconds', 'milliseconds'].some(u => lowerUnit.includes(u))) {
     return false
   }
+  // Percentage (overhead) - lower is better
+  if (lowerUnit.includes('percent') || lowerUnit.includes('%')) {
+    return false
+  }
   // Throughput/speed units - higher is better
   if (['mb/s', 'gb/s', '/s', 'ops', 'files'].some(u => lowerUnit.includes(u))) {
     return true
