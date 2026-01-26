@@ -55,19 +55,30 @@ export default function CompactComparisonChart({
 function inferHigherIsBetter(unit) {
   if (!unit) return true
   const lowerUnit = unit.toLowerCase()
-  // Time/latency units - lower is better
-  if (['sec', 's', 'ms', 'μs', 'us', 'ns', 'seconds', 'milliseconds'].some(u => lowerUnit.includes(u))) {
+
+  // FIRST: Check for rate/throughput units (contain "/" indicating "per")
+  // Examples: files/sec, MB/s, operations/second, GB/s
+  // Must check BEFORE time units since rates contain time suffixes
+  if (lowerUnit.includes('/')) {
+    return true
+  }
+
+  // Throughput keywords without slash
+  if (lowerUnit.includes('throughput') || lowerUnit.includes('bandwidth')) {
+    return true
+  }
+
+  // Time/latency/duration units - lower is better
+  if (['sec', 'second', 'ms', 'millisec', 'μs', 'us', 'ns', 'nanosec', 'latency', 'time'].some(u => lowerUnit.includes(u))) {
     return false
   }
+
   // Percentage (overhead) - lower is better
   if (lowerUnit.includes('percent') || lowerUnit.includes('%')) {
     return false
   }
-  // Throughput/speed units - higher is better
-  if (['mb/s', 'gb/s', '/s', 'ops', 'files'].some(u => lowerUnit.includes(u))) {
-    return true
-  }
-  return true // default
+
+  return true // default higher is better
 }
 
 function TestRow({ test, isExpanded, onToggle }) {
