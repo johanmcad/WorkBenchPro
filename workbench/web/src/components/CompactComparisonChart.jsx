@@ -224,7 +224,8 @@ function inferHigherIsBetter(unit) {
     const beforeSlash = lowerUnit.split('/')[0]
     // If time unit is BEFORE the slash (like "ms/op", "sec/iter"), lower is better
     // These measure "time per operation" - less time = better
-    if (['ms', 's', 'sec', 'μs', 'us', 'ns'].some(t => beforeSlash === t || beforeSlash.endsWith(t))) {
+    // Use exact match only to avoid false positives like "files" ending with "s"
+    if (['ms', 's', 'sec', 'μs', 'us', 'ns'].includes(beforeSlash)) {
       return false
     }
     // Otherwise it's "X per time" (like files/sec, MB/s) - higher is better
