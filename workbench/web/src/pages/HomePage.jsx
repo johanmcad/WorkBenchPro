@@ -88,9 +88,11 @@ export default function HomePage() {
               Benchmark Your
               <span className="text-wb-accent-light"> Developer Workstation</span>
             </h1>
-            <p className="text-xl text-wb-text-secondary mb-8 max-w-2xl mx-auto">
-              Measure what matters for software development. Real-world benchmarks for
-              builds, file operations, and system responsiveness.
+            <p className="text-xl text-wb-text-secondary mb-4 max-w-2xl mx-auto">
+              <strong className="text-wb-text-primary">Measure what matters for developers.</strong> Benchmark your workstation's real-world performance—CPU, disk, memory, and the apps you actually use like compilers and PowerShell.
+            </p>
+            <p className="text-lg text-wb-text-secondary mb-8 max-w-2xl mx-auto">
+              <strong className="text-wb-text-primary">Know your machine. Optimize your workflow.</strong> Get actionable insights to identify bottlenecks and compare systems, so you spend less time waiting and more time coding.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#download" className="btn-primary flex items-center justify-center gap-2 text-lg">
@@ -193,7 +195,7 @@ export default function HomePage() {
 
             <div className="space-y-4">
               <a
-                href="https://github.com/YOUR_USERNAME/workbench/releases/latest/download/workbench.exe"
+                href="https://github.com/johanmcad/workbench/releases/latest/download/workbench.exe"
                 className="btn-primary inline-flex items-center gap-2 text-lg"
               >
                 <Download size={20} />
@@ -203,7 +205,7 @@ export default function HomePage() {
               <p className="text-sm text-wb-text-secondary">
                 Or view all releases on{' '}
                 <a
-                  href="https://github.com/YOUR_USERNAME/workbench/releases"
+                  href="https://github.com/johanmcad/workbench/releases"
                   className="text-wb-accent-light hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
