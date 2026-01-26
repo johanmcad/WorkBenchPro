@@ -16,6 +16,7 @@ export default {
         'wb-text': '#ecf0f1',
         'wb-text-secondary': '#95a5a6',
         'wb-success': '#27ae60',
+        'wb-warning': '#f59e0b',
         'wb-error': '#e74c3c',
         'wb-border': '#2c3e50',
       },

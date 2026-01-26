@@ -203,6 +203,29 @@ impl CloudClient {
         })
     }
 
+    /// Delete an uploaded benchmark run from the community database
+    pub fn delete(&self, remote_id: &str) -> Result<(), CloudError> {
+        let url = format!(
+            "{}/rest/v1/benchmark_runs?id=eq.{}",
+            SUPABASE_URL, remote_id
+        );
+
+        let response = self
+            .client
+            .delete(&url)
+            .header("apikey", SUPABASE_ANON_KEY)
+            .header("Authorization", format!("Bearer {}", SUPABASE_ANON_KEY))
+            .send()?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().unwrap_or_default();
+            return Err(CloudError::Server(format!("{}: {}", status, body)));
+        }
+
+        Ok(())
+    }
+
     /// Upload a local benchmark run to the community database
     pub fn upload(&self, run: &BenchmarkRun, display_name: &str) -> Result<String, CloudError> {
         let url = format!("{}/rest/v1/benchmark_runs", SUPABASE_URL);

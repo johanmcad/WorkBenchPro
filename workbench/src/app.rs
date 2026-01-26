@@ -1,10 +1,11 @@
 use std::sync::mpsc::Receiver;
 
 use eframe::egui;
+use sha2::{Sha256, Digest};
 
 use crate::benchmarks::apps::{
     AppLaunchBenchmark, ArchiveOpsBenchmark, CSharpCompileBenchmark, DefenderImpactBenchmark,
-    EnvironmentBenchmark, EventLogBenchmark, NetworkBenchmark, PowerShellBenchmark,
+    EnvironmentBenchmark, EventLogBenchmark, PowerShellBenchmark,
     ProcessesBenchmark, RegistryBenchmark, RobocopyBenchmark, ServicesBenchmark, SymlinkBenchmark,
     TaskSchedulerBenchmark, WindowsCompressionBenchmark, WindowsSearchBenchmark, WmicBenchmark,
 };
@@ -19,17 +20,28 @@ use crate::benchmarks::latency::{
     ProcessSpawnBenchmark, StorageLatencyBenchmark, ThreadWakeBenchmark,
 };
 use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
-use crate::benchmarks::Benchmark;
+use crate::benchmarks::{Benchmark, Category};
 use crate::cloud::{BrowseFilter, CloudClient, CommunityRun};
-use crate::core::{BenchmarkMessage, BenchmarkRunner, RunConfig, SystemInfoCollector};
+use crate::core::{BenchmarkMessage, BenchmarkRunner, BenchmarkSettings, SystemInfoCollector};
 use crate::export::JsonExporter;
 use crate::models::{BenchmarkRun, SystemInfo};
 use crate::storage::HistoryStorage;
 use crate::ui::views::{
     CommunityAction, CommunityFilters, CommunityView, ComparisonView, HistoryAction, HistoryView,
-    HomeView, ResultsAction, ResultsView, RunningView,
+    HomeAction, HomeView, ResultsAction, ResultsView, RunningView, SettingsAction, SettingsDialog,
 };
 use crate::ui::Theme;
+
+// SHA-256 hash of the admin password
+const ADMIN_PASSWORD_HASH: &str = "92f71e72f53a12f3851825f1caf01587679bc8333ecf07c9df745b0c4386eec0";
+
+fn verify_admin_password(password: &str) -> bool {
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let result = hasher.finalize();
+    let hash_hex = format!("{:x}", result);
+    hash_hex == ADMIN_PASSWORD_HASH
+}
 
 /// Application state
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,7 +60,7 @@ enum AppState {
 pub struct WorkBenchProApp {
     state: AppState,
     system_info: SystemInfo,
-    run_config: RunConfig,
+    settings: BenchmarkSettings,
     runner: BenchmarkRunner,
     receiver: Option<Receiver<BenchmarkMessage>>,
 
@@ -81,6 +93,16 @@ pub struct WorkBenchProApp {
     upload_error: Option<String>,
     upload_success: bool,
     upload_run_index: Option<usize>, // Index of run being uploaded (None = last_run)
+
+    // Settings dialog state
+    show_settings_dialog: bool,
+    settings_backup: Option<BenchmarkSettings>,
+
+    // Remove upload dialog state
+    show_remove_upload_dialog: bool,
+    remove_upload_password: String,
+    remove_upload_error: Option<String>,
+    remove_upload_run_index: Option<usize>,
 }
 
 impl WorkBenchProApp {
@@ -97,10 +119,14 @@ impl WorkBenchProApp {
         let history_runs = history_storage.load_all().unwrap_or_default();
         let history_selected = vec![false; history_runs.len()];
 
+        // Create default settings with machine name
+        let mut settings = BenchmarkSettings::default();
+        settings.machine_name = machine_name.clone();
+
         Self {
             state: AppState::Home,
             system_info,
-            run_config: RunConfig { machine_name: machine_name.clone(), skip_synthetic: false },
+            settings,
             runner: BenchmarkRunner::new(),
             receiver: None,
             overall_progress: 0.0,
@@ -125,6 +151,15 @@ impl WorkBenchProApp {
             upload_error: None,
             upload_success: false,
             upload_run_index: None,
+            // Settings dialog
+            show_settings_dialog: false,
+            settings_backup: None,
+
+            // Remove upload dialog
+            show_remove_upload_dialog: false,
+            remove_upload_password: String::new(),
+            remove_upload_error: None,
+            remove_upload_run_index: None,
         }
     }
 
@@ -161,22 +196,29 @@ impl WorkBenchProApp {
             Box::new(TaskSchedulerBenchmark::new()),
             Box::new(AppLaunchBenchmark::new()),
             Box::new(ServicesBenchmark::new()),
-            Box::new(NetworkBenchmark::new()),
             Box::new(WmicBenchmark::new()),
             Box::new(ProcessesBenchmark::new()),
             Box::new(SymlinkBenchmark::new()),
             Box::new(EnvironmentBenchmark::new()),
         ];
 
-        // Filter out synthetic benchmarks if requested
-        let benchmarks: Vec<Box<dyn Benchmark>> = if self.run_config.skip_synthetic {
-            all_benchmarks
-                .into_iter()
-                .filter(|b| !b.is_synthetic())
-                .collect()
-        } else {
-            all_benchmarks
-        };
+        // Filter benchmarks based on settings
+        let benchmarks: Vec<Box<dyn Benchmark>> = all_benchmarks
+            .into_iter()
+            .filter(|b| {
+                // Filter by category
+                let category_enabled = match b.category() {
+                    Category::ProjectOperations => self.settings.run_project_operations,
+                    Category::BuildPerformance => self.settings.run_build_performance,
+                    Category::Responsiveness => self.settings.run_responsiveness,
+                };
+
+                // Filter synthetic benchmarks if requested
+                let synthetic_ok = !self.settings.skip_synthetic || !b.is_synthetic();
+
+                category_enabled && synthetic_ok
+            })
+            .collect();
 
         // Reset running state
         self.overall_progress = 0.0;
@@ -185,7 +227,7 @@ impl WorkBenchProApp {
         self.completed_tests.clear();
 
         // Start runner
-        let receiver = self.runner.start(benchmarks, self.run_config.clone());
+        let receiver = self.runner.start(benchmarks, self.settings.clone());
         self.receiver = Some(receiver);
         self.state = AppState::Running;
     }
@@ -278,6 +320,56 @@ impl WorkBenchProApp {
                 tracing::error!("Failed to delete run: {}", e);
             }
             self.reload_history();
+        }
+    }
+
+    fn open_remove_upload_dialog(&mut self, idx: usize) {
+        self.remove_upload_run_index = Some(idx);
+        self.remove_upload_password = String::new();
+        self.remove_upload_error = None;
+        self.show_remove_upload_dialog = true;
+    }
+
+    fn reset_remove_upload_dialog(&mut self) {
+        self.show_remove_upload_dialog = false;
+        self.remove_upload_password = String::new();
+        self.remove_upload_error = None;
+        self.remove_upload_run_index = None;
+    }
+
+    fn remove_upload(&mut self) {
+        // Verify password first
+        if !verify_admin_password(&self.remove_upload_password) {
+            self.remove_upload_error = Some("Invalid admin password".to_string());
+            return;
+        }
+
+        if let Some(idx) = self.remove_upload_run_index {
+            if idx < self.history_runs.len() {
+                let run = &self.history_runs[idx];
+
+                // Delete from cloud if remote_id exists
+                if let Some(ref remote_id) = run.remote_id {
+                    if let Err(e) = self.cloud_client.delete(remote_id) {
+                        self.remove_upload_error = Some(format!("Failed to remove: {}", e));
+                        return;
+                    }
+                }
+
+                // Clear upload status locally
+                if let Some(history_run) = self.history_runs.get_mut(idx) {
+                    history_run.remote_id = None;
+                    history_run.uploaded_at = None;
+
+                    // Re-save to persist the change
+                    if let Err(e) = self.history_storage.save(history_run) {
+                        tracing::error!("Failed to update history after removing upload: {}", e);
+                    }
+                }
+
+                tracing::info!("Upload removed successfully");
+                self.reset_remove_upload_dialog();
+            }
         }
     }
 
@@ -375,7 +467,23 @@ impl WorkBenchProApp {
         self.upload_error = None;
         self.upload_success = false;
         self.upload_run_index = None;
-        self.upload_display_name = self.run_config.machine_name.clone();
+        self.upload_display_name = self.settings.machine_name.clone();
+    }
+
+    fn open_settings_dialog(&mut self) {
+        self.settings_backup = Some(self.settings.clone());
+        self.show_settings_dialog = true;
+    }
+
+    fn close_settings_dialog(&mut self, save: bool) {
+        if !save {
+            // Restore from backup on cancel
+            if let Some(backup) = self.settings_backup.take() {
+                self.settings = backup;
+            }
+        }
+        self.settings_backup = None;
+        self.show_settings_dialog = false;
     }
 }
 
@@ -385,10 +493,9 @@ impl eframe::App for WorkBenchProApp {
         self.process_messages();
 
         // Determine actions needed
-        let mut action_start = false;
+        let mut home_action = HomeAction::None;
         let mut action_cancel = false;
         let mut results_action = ResultsAction::None;
-        let mut action_history = false;
         let mut history_action = HistoryAction::None;
         let mut comparison_back = false;
         let mut historic_view_back = false;
@@ -398,10 +505,7 @@ impl eframe::App for WorkBenchProApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             match &self.state {
                 AppState::Home => {
-                    let (start, history) =
-                        HomeView::show_with_history(ui, &self.system_info, &mut self.run_config);
-                    action_start = start;
-                    action_history = history;
+                    home_action = HomeView::show(ui, &self.system_info, &self.settings);
                 }
                 AppState::Running => {
                     action_cancel = RunningView::show(
@@ -572,10 +676,115 @@ impl eframe::App for WorkBenchProApp {
             }
         }
 
-        // Handle actions after UI is done
-        if action_start {
-            self.start_benchmark();
+        // Show remove upload dialog if active
+        let mut remove_should_close = false;
+        let mut remove_should_confirm = false;
+
+        if self.show_remove_upload_dialog {
+            egui::Window::new("Remove Upload")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.set_min_width(300.0);
+
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("Admin authentication required")
+                                .size(Theme::SIZE_BODY)
+                                .color(Theme::WARNING),
+                        );
+                        ui.add_space(8.0);
+
+                        ui.label(
+                            egui::RichText::new("Enter admin password:")
+                                .size(Theme::SIZE_CAPTION)
+                                .color(Theme::TEXT_SECONDARY),
+                        );
+                        let response = ui.add(
+                            egui::TextEdit::singleline(&mut self.remove_upload_password)
+                                .password(true)
+                                .desired_width(280.0)
+                                .hint_text("Admin password"),
+                        );
+
+                        // Submit on Enter key
+                        if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                            remove_should_confirm = true;
+                        }
+
+                        if let Some(ref err) = self.remove_upload_error {
+                            ui.add_space(8.0);
+                            ui.label(
+                                egui::RichText::new(err)
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::ERROR),
+                            );
+                        }
+
+                        ui.add_space(12.0);
+
+                        ui.horizontal(|ui| {
+                            if ui.button("Cancel").clicked() {
+                                remove_should_close = true;
+                            }
+
+                            ui.add_space(8.0);
+
+                            let remove_btn = egui::Button::new(
+                                egui::RichText::new("Remove")
+                                    .color(egui::Color32::WHITE),
+                            )
+                            .fill(Theme::ERROR);
+
+                            if ui.add(remove_btn).clicked() {
+                                remove_should_confirm = true;
+                            }
+                        });
+                    });
+                });
         }
+
+        if remove_should_close {
+            self.reset_remove_upload_dialog();
+        }
+
+        if remove_should_confirm {
+            self.remove_upload();
+        }
+
+        // Show settings dialog if active
+        let mut settings_action = SettingsAction::None;
+        if self.show_settings_dialog {
+            settings_action = SettingsDialog::show(ctx, &mut self.settings);
+        }
+
+        // Handle settings dialog actions
+        match settings_action {
+            SettingsAction::None => {}
+            SettingsAction::Save => {
+                self.close_settings_dialog(true);
+            }
+            SettingsAction::Cancel => {
+                self.close_settings_dialog(false);
+            }
+        }
+
+        // Handle home actions
+        match home_action {
+            HomeAction::None => {}
+            HomeAction::Run => {
+                self.start_benchmark();
+            }
+            HomeAction::History => {
+                self.reload_history();
+                self.state = AppState::History;
+            }
+            HomeAction::Settings => {
+                self.open_settings_dialog();
+            }
+        }
+
         if action_cancel {
             self.cancel_benchmark();
         }
@@ -603,14 +812,9 @@ impl eframe::App for WorkBenchProApp {
             }
             ResultsAction::Upload => {
                 self.upload_run_index = None; // Upload last_run
-                self.upload_display_name = self.run_config.machine_name.clone();
+                self.upload_display_name = self.settings.machine_name.clone();
                 self.show_upload_dialog = true;
             }
-        }
-
-        if action_history {
-            self.reload_history();
-            self.state = AppState::History;
         }
         if comparison_back || historic_view_back {
             self.state = AppState::History;
@@ -640,8 +844,11 @@ impl eframe::App for WorkBenchProApp {
             }
             HistoryAction::Upload(idx) => {
                 self.upload_run_index = Some(idx);
-                self.upload_display_name = self.run_config.machine_name.clone();
+                self.upload_display_name = self.settings.machine_name.clone();
                 self.show_upload_dialog = true;
+            }
+            HistoryAction::RemoveUpload(idx) => {
+                self.open_remove_upload_dialog(idx);
             }
             HistoryAction::DeleteRun(idx) => {
                 self.delete_history_run(idx);

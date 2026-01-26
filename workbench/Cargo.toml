@@ -40,6 +40,9 @@ urlencoding = "2.1"
 # Compression (CPU benchmark)
 lz4_flex = "0.11"
 
+# Hashing
+sha2 = "0.10"
+
 # Image (icon)
 image = { version = "0.25", default-features = false, features = ["png"] }
 

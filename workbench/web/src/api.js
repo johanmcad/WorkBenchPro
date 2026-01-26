@@ -59,6 +59,35 @@ export async function fetchStats() {
   }
 }
 
+// Admin password hash (SHA-256)
+const ADMIN_PASSWORD_HASH = '92f71e72f53a12f3851825f1caf01587679bc8333ecf07c9df745b0c4386eec0'
+
+async function hashPassword(password) {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+}
+
+export async function deleteBenchmarkRun(id, password) {
+  // Verify password
+  const passwordHash = await hashPassword(password)
+  if (passwordHash !== ADMIN_PASSWORD_HASH) {
+    throw new Error('Invalid admin password')
+  }
+
+  const url = `${SUPABASE_URL}/rest/v1/benchmark_runs?id=eq.${id}`
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers,
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete: ${response.status}`)
+  }
+}
+
 // GitHub Releases API for download links
 export async function fetchLatestRelease() {
   try {

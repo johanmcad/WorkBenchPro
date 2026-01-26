@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft,
   Cpu,
@@ -9,6 +9,8 @@ import {
   Loader2,
   GitCompare,
   MemoryStick,
+  Trash2,
+  X,
 } from 'lucide-react'
 import {
   BarChart,
@@ -20,13 +22,20 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts'
-import { fetchBenchmarkRun } from '../api'
+import { fetchBenchmarkRun, deleteBenchmarkRun } from '../api'
 
 export default function ResultDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [result, setResult] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Delete modal state
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletePassword, setDeletePassword] = useState('')
+  const [deleteError, setDeleteError] = useState(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     const load = async () => {
@@ -53,6 +62,33 @@ export default function ResultDetailPage() {
       hour: '2-digit',
       minute: '2-digit',
     })
+  }
+
+  const handleDelete = async (e) => {
+    e.preventDefault()
+    setDeleting(true)
+    setDeleteError(null)
+
+    try {
+      await deleteBenchmarkRun(id, deletePassword)
+      navigate('/results')
+    } catch (err) {
+      setDeleteError(err.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const openDeleteModal = () => {
+    setShowDeleteModal(true)
+    setDeletePassword('')
+    setDeleteError(null)
+  }
+
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false)
+    setDeletePassword('')
+    setDeleteError(null)
   }
 
   if (loading) {
@@ -151,15 +187,93 @@ export default function ResultDetailPage() {
             </div>
           </div>
 
-          <Link
-            to={`/compare?id=${id}`}
-            className="btn-primary flex items-center gap-2 flex-shrink-0"
-          >
-            <GitCompare size={18} />
-            Compare
-          </Link>
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              to={`/compare?id=${id}`}
+              className="btn-primary flex items-center gap-2"
+            >
+              <GitCompare size={18} />
+              Compare
+            </Link>
+            <button
+              onClick={openDeleteModal}
+              className="btn-secondary flex items-center gap-2 text-wb-error hover:bg-wb-error/20 hover:border-wb-error"
+            >
+              <Trash2 size={18} />
+              Remove
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="card max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-wb-warning">Remove Upload</h3>
+              <button
+                onClick={closeDeleteModal}
+                className="text-wb-text-secondary hover:text-white transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <p className="text-wb-text-secondary mb-6">
+              Admin authentication required to remove this benchmark from the community database.
+            </p>
+
+            <form onSubmit={handleDelete}>
+              <div className="mb-4">
+                <label className="block text-sm text-wb-text-secondary mb-2">
+                  Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={deletePassword}
+                  onChange={(e) => setDeletePassword(e.target.value)}
+                  placeholder="Enter admin password"
+                  className="input w-full"
+                  autoFocus
+                />
+              </div>
+
+              {deleteError && (
+                <p className="text-wb-error text-sm mb-4">{deleteError}</p>
+              )}
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  className="btn-secondary"
+                  disabled={deleting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary bg-wb-error hover:bg-wb-error/80 flex items-center gap-2"
+                  disabled={deleting || !deletePassword}
+                >
+                  {deleting ? (
+                    <>
+                      <Loader2 size={18} className="animate-spin" />
+                      Removing...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={18} />
+                      Remove
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Benchmark Results by Category */}
       {categories.map(({ key, name, color }) => {

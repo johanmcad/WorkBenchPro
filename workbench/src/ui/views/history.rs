@@ -11,6 +11,7 @@ pub enum HistoryAction {
     CompareRuns(usize, usize),
     CompareOnline(usize),  // Compare run at index against community
     Upload(usize),         // Upload run at index to community
+    RemoveUpload(usize),   // Remove uploaded run from community
     DeleteRun(usize),
 }
 
@@ -239,13 +240,18 @@ impl HistoryView {
 
                                         ui.add_space(4.0);
                                     } else {
-                                        // Show uploaded indicator
-                                        ui.label(
-                                            RichText::new("Uploaded")
+                                        // Show remove upload button
+                                        let remove_btn = egui::Button::new(
+                                            RichText::new("Remove Upload")
                                                 .size(Theme::SIZE_CAPTION)
-                                                .color(Theme::SUCCESS)
-                                                .italics(),
-                                        );
+                                                .color(Theme::WARNING),
+                                        )
+                                        .rounding(Theme::BADGE_ROUNDING);
+
+                                        if ui.add(remove_btn).clicked() {
+                                            action = HistoryAction::RemoveUpload(idx);
+                                        }
+
                                         ui.add_space(4.0);
                                     }
 
