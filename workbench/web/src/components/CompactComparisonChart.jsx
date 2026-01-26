@@ -81,9 +81,9 @@ const TEST_DESCRIPTIONS = {
     why: 'Measures compression/decompression speed with Windows native tools.',
   },
   'C# Compilation': {
-    what: 'Tests Windows native C# compilation performance.',
-    how: 'Generates C# source files with classes and functions, then compiles with csc.exe.',
-    why: 'Measures build performance using Windows built-in compiler.',
+    what: 'Tests .NET C# compilation performance.',
+    how: 'Creates a multi-file C# project with models, processors, math classes, and utilities, then compiles with dotnet build.',
+    why: 'Measures build performance for .NET developers. Requires .NET SDK.',
   },
   'Archive Operations': {
     what: 'Tests archive compression and extraction speed.',
