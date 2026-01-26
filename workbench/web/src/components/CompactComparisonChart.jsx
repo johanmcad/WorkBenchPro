@@ -23,14 +23,16 @@ export default function CompactComparisonChart({
           <h3 className="text-sm font-semibold text-wb-text-secondary">{title}</h3>
           {/* Legend */}
           <div className="flex gap-3 text-[10px] text-wb-text-secondary">
+            <span className="text-red-400/70">← worse</span>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-green-400" />
-              <span>Selected</span>
+              <span>You</span>
             </div>
             <div className="flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-yellow-400" />
               <span>Median</span>
             </div>
+            <span className="text-green-400/70">better →</span>
           </div>
         </div>
       )}
@@ -54,10 +56,20 @@ function TestRow({ test, isExpanded, onToggle }) {
   const userValue = percentile?.user_value
   const isHigherBetter = percentile?.is_higher_better ?? true
 
-  // Calculate positions as percentages
+  // Calculate positions as percentages (flip for lower-is-better so right = better)
   const range = max_value - min_value
-  const userPosition = range > 0 ? ((userValue - min_value) / range) * 100 : 50
-  const medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
+  let userPosition = range > 0 ? ((userValue - min_value) / range) * 100 : 50
+  let medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
+
+  // For lower-is-better, flip positions so right = better (lower values)
+  if (!isHigherBetter) {
+    userPosition = 100 - userPosition
+    medianPosition = 100 - medianPosition
+  }
+
+  // Display values: left = worst, right = best
+  const leftValue = isHigherBetter ? min_value : max_value
+  const rightValue = isHigherBetter ? max_value : min_value
 
   return (
     <div>
@@ -71,23 +83,16 @@ function TestRow({ test, isExpanded, onToggle }) {
         </div>
 
         {/* Test name - fixed width */}
-        <div className="w-40 shrink-0 flex items-center gap-1.5">
+        <div className="w-44 shrink-0">
           <span className="text-xs truncate" title={test_name}>
             {test_name}
-          </span>
-          <span className={`text-[8px] px-1 rounded shrink-0 ${
-            isHigherBetter
-              ? 'text-green-400 bg-green-400/10'
-              : 'text-yellow-400 bg-yellow-400/10'
-          }`}>
-            {isHigherBetter ? '↑ higher' : '↓ lower'}
           </span>
         </div>
 
         {/* Range bar */}
         <div className="flex-1 flex items-center gap-2">
           <span className="text-[9px] text-wb-text-secondary w-10 text-right shrink-0">
-            {formatValue(min_value)}
+            {formatValue(leftValue)}
           </span>
 
           {/* Bar */}
@@ -96,7 +101,7 @@ function TestRow({ test, isExpanded, onToggle }) {
             <div
               className="absolute inset-0 rounded-full opacity-50"
               style={{
-                background: 'linear-gradient(90deg, rgba(59,130,246,0.3) 0%, rgba(59,130,246,0.5) 50%, rgba(59,130,246,0.3) 100%)'
+                background: 'linear-gradient(90deg, rgba(239,68,68,0.3) 0%, rgba(59,130,246,0.3) 50%, rgba(16,185,129,0.3) 100%)'
               }}
             />
 
@@ -122,7 +127,7 @@ function TestRow({ test, isExpanded, onToggle }) {
           </div>
 
           <span className="text-[9px] text-wb-text-secondary w-10 shrink-0">
-            {formatValue(max_value)}
+            {formatValue(rightValue)}
           </span>
         </div>
 
@@ -188,9 +193,6 @@ function TestRow({ test, isExpanded, onToggle }) {
                 <div className="text-white">{sample_count}</div>
               </div>
             )}
-          </div>
-          <div className="mt-2 pt-2 border-t border-wb-border text-[10px] text-wb-text-secondary">
-            {isHigherBetter ? '↑ Higher values are better' : '↓ Lower values are better'}
           </div>
         </div>
       )}
