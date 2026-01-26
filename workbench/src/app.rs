@@ -79,6 +79,7 @@ pub struct WorkBenchProApp {
     // Upload dialog state
     show_upload_dialog: bool,
     upload_display_name: String,
+    upload_description: String, // Optional description (VDI, Desktop, Laptop, etc.)
     upload_in_progress: bool,
     upload_error: Option<String>,
     upload_success: bool,
@@ -122,6 +123,7 @@ impl WorkBenchProApp {
             // Upload dialog
             show_upload_dialog: false,
             upload_display_name: machine_name,
+            upload_description: String::new(),
             upload_in_progress: false,
             upload_error: None,
             upload_success: false,
@@ -315,7 +317,12 @@ impl WorkBenchProApp {
         self.upload_in_progress = true;
         self.upload_error = None;
 
-        match self.cloud_client.upload(run, &self.upload_display_name) {
+        let description = if self.upload_description.trim().is_empty() {
+            None
+        } else {
+            Some(self.upload_description.trim().to_string())
+        };
+        match self.cloud_client.upload(run, &self.upload_display_name, description) {
             Ok(remote_id) => {
                 self.upload_in_progress = false;
                 self.upload_success = true;
@@ -351,6 +358,7 @@ impl WorkBenchProApp {
         self.upload_success = false;
         self.upload_run_index = None;
         self.upload_display_name = self.system_info.hostname.clone();
+        self.upload_description = String::new();
     }
 }
 
@@ -456,9 +464,21 @@ impl eframe::App for WorkBenchProApp {
                                     .hint_text("Enter a name for your submission"),
                             );
 
+                            ui.add_space(8.0);
+                            ui.label(
+                                egui::RichText::new("Description (optional):")
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::TEXT_SECONDARY),
+                            );
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.upload_description)
+                                    .desired_width(280.0)
+                                    .hint_text("e.g. VDI, Desktop, Laptop, Gaming PC"),
+                            );
+
                             ui.add_space(4.0);
                             ui.label(
-                                egui::RichText::new("This name will be visible to everyone")
+                                egui::RichText::new("This info will be visible to everyone")
                                     .size(Theme::SIZE_CAPTION)
                                     .color(Theme::TEXT_SECONDARY)
                                     .italics(),

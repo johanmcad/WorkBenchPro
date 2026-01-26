@@ -279,6 +279,12 @@ export default function ResultsPage() {
                       )}
                     </div>
                     <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
+                      {result.description && (
+                        <>
+                          <span className="text-wb-accent">{result.description}</span>
+                          <span>•</span>
+                        </>
+                      )}
                       <span className="truncate">{result.cpu_name}</span>
                       <span>•</span>
                       <span>{Math.round(result.memory_gb)}GB</span>
@@ -312,6 +318,9 @@ export default function ResultsPage() {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-xl font-bold">{selectedRun.display_name}</h1>
+                  {selectedRun.description && (
+                    <span className="text-wb-text-secondary text-sm">({selectedRun.description})</span>
+                  )}
                   {runScores[selectedId] && (
                     <span className="inline-flex items-center gap-1.5 px-2 py-1 bg-green-500/20 text-green-400 rounded text-sm font-medium">
                       <Trophy size={14} />

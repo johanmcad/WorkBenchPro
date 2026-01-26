@@ -95,6 +95,7 @@ struct BenchmarkRunRow {
 #[derive(Debug, Serialize)]
 struct UploadPayload {
     display_name: String,
+    description: Option<String>,
     machine_name: String,
     run_timestamp: DateTime<Utc>,
     cpu_name: String,
@@ -267,7 +268,7 @@ impl CloudClient {
     }
 
     /// Upload a local benchmark run to the community database
-    pub fn upload(&self, run: &BenchmarkRun, display_name: &str) -> Result<String, CloudError> {
+    pub fn upload(&self, run: &BenchmarkRun, display_name: &str, description: Option<String>) -> Result<String, CloudError> {
         let url = format!("{}/rest/v1/benchmark_runs", SUPABASE_URL);
 
         // Determine storage type from system info
@@ -285,6 +286,7 @@ impl CloudClient {
 
         let payload = UploadPayload {
             display_name: display_name.to_string(),
+            description,
             machine_name: run.machine_name.clone(),
             run_timestamp: run.timestamp,
             cpu_name: run.system_info.cpu.name.clone(),

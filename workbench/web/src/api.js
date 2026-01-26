@@ -9,7 +9,7 @@ const headers = {
 }
 
 export async function fetchBenchmarkRuns({ cpuFilter, osFilter, minMemory, limit = 50 } = {}) {
-  let url = `${SUPABASE_URL}/rest/v1/benchmark_runs?select=id,display_name,cpu_name,cpu_cores,cpu_threads,memory_gb,os_name,storage_type,uploaded_at&order=uploaded_at.desc&limit=${limit}`
+  let url = `${SUPABASE_URL}/rest/v1/benchmark_runs?select=id,display_name,description,cpu_name,cpu_cores,cpu_threads,memory_gb,os_name,storage_type,uploaded_at&order=uploaded_at.desc&limit=${limit}`
 
   if (cpuFilter) {
     url += `&cpu_name=ilike.*${encodeURIComponent(cpuFilter)}*`
