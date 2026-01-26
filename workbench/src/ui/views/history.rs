@@ -9,9 +9,10 @@ pub enum HistoryAction {
     Back,
     ViewRun(usize),
     CompareRuns(usize, usize),
-    CompareOnline(usize),  // Compare run at index against community
-    Upload(usize),         // Upload run at index to community
-    RemoveUpload(usize),   // Remove uploaded run from community
+    CompareOnline(usize),       // Compare run at index against community
+    CommunityComparison(usize), // View community comparison for run at index
+    Upload(usize),              // Upload run at index to community
+    RemoveUpload(usize),        // Remove uploaded run from community
     DeleteRun(usize),
 }
 
@@ -250,6 +251,23 @@ impl HistoryView {
 
                                         if ui.add(remove_btn).clicked() {
                                             action = HistoryAction::RemoveUpload(idx);
+                                        }
+
+                                        ui.add_space(4.0);
+                                    }
+
+                                    // Community Stats button (only if uploaded)
+                                    if run.uploaded_at.is_some() {
+                                        let stats_btn = egui::Button::new(
+                                            RichText::new("Community Stats")
+                                                .size(Theme::SIZE_CAPTION)
+                                                .color(egui::Color32::WHITE),
+                                        )
+                                        .fill(Theme::SUCCESS)
+                                        .rounding(Theme::BADGE_ROUNDING);
+
+                                        if ui.add(stats_btn).clicked() {
+                                            action = HistoryAction::CommunityComparison(idx);
                                         }
 
                                         ui.add_space(4.0);

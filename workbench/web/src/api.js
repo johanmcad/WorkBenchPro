@@ -88,6 +88,34 @@ export async function deleteBenchmarkRun(id, password) {
   }
 }
 
+// Fetch test statistics with histogram buckets for community comparison
+export async function fetchTestStatistics() {
+  const url = `${SUPABASE_URL}/rest/v1/rpc/get_test_statistics`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({})
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to fetch statistics: ${response.status}`)
+  }
+  return response.json()
+}
+
+// Fetch percentile rank for a specific run
+export async function fetchPercentileRank(runId) {
+  const url = `${SUPABASE_URL}/rest/v1/rpc/get_percentile_rank`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ run_id: runId })
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to fetch percentile rank: ${response.status}`)
+  }
+  return response.json()
+}
+
 // GitHub Releases API for download links
 export async function fetchLatestRelease() {
   try {

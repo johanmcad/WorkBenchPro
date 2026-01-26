@@ -11,6 +11,7 @@ import {
   MemoryStick,
   Trash2,
   X,
+  BarChart3,
 } from 'lucide-react'
 import {
   BarChart,
@@ -188,6 +189,13 @@ export default function ResultDetailPage() {
           </div>
 
           <div className="flex items-center gap-3 flex-shrink-0">
+            <Link
+              to={`/results/${id}/community`}
+              className="btn-primary flex items-center gap-2 bg-green-600 hover:bg-green-700"
+            >
+              <BarChart3 size={18} />
+              Community Stats
+            </Link>
             <Link
               to={`/compare?id=${id}`}
               className="btn-primary flex items-center gap-2"

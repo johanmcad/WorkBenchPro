@@ -11,6 +11,7 @@ pub enum ResultsAction {
     Export,
     History,
     CompareOnline,
+    CommunityComparison,
     Upload,
 }
 
@@ -313,12 +314,19 @@ impl ResultsView {
                             action = ResultsAction::Upload;
                         }
                     } else {
-                        ui.label(
-                            RichText::new("Already uploaded")
-                                .size(Theme::SIZE_CAPTION)
-                                .color(Theme::TEXT_SECONDARY)
-                                .italics(),
-                        );
+                        // Show Community Stats button for uploaded runs
+                        let stats_btn = egui::Button::new(
+                            RichText::new("Community Stats")
+                                .size(Theme::SIZE_BODY)
+                                .color(egui::Color32::WHITE),
+                        )
+                        .min_size(egui::vec2(120.0, 32.0))
+                        .fill(Theme::SUCCESS)
+                        .rounding(Theme::CARD_ROUNDING);
+
+                        if ui.add(stats_btn).clicked() {
+                            action = ResultsAction::CommunityComparison;
+                        }
                     }
                 });
 

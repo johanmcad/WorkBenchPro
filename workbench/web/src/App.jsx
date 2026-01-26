@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import ResultsPage from './pages/ResultsPage'
 import ResultDetailPage from './pages/ResultDetailPage'
 import ComparePage from './pages/ComparePage'
+import CommunityComparisonPage from './pages/CommunityComparisonPage'
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/results/:id" element={<ResultDetailPage />} />
+          <Route path="/results/:id/community" element={<CommunityComparisonPage />} />
           <Route path="/compare" element={<ComparePage />} />
         </Routes>
       </main>

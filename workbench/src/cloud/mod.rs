@@ -5,4 +5,4 @@
 
 mod client;
 
-pub use client::{BrowseFilter, CloudClient, CommunityRun};
+pub use client::{BrowseFilter, CloudClient, CommunityRun, HistogramBucket, PercentileRank, TestStatistics};

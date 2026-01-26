@@ -20,15 +20,16 @@ use crate::benchmarks::latency::{
     ProcessSpawnBenchmark, StorageLatencyBenchmark, ThreadWakeBenchmark,
 };
 use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
-use crate::benchmarks::{Benchmark, Category};
-use crate::cloud::{BrowseFilter, CloudClient, CommunityRun};
-use crate::core::{BenchmarkMessage, BenchmarkRunner, BenchmarkSettings, SystemInfoCollector};
+use crate::benchmarks::Benchmark;
+use crate::cloud::{BrowseFilter, CloudClient, CommunityRun, PercentileRank, TestStatistics};
+use crate::core::{BenchmarkMessage, BenchmarkRunner, SystemInfoCollector};
 use crate::export::JsonExporter;
 use crate::models::{BenchmarkRun, SystemInfo};
 use crate::storage::HistoryStorage;
 use crate::ui::views::{
-    CommunityAction, CommunityFilters, CommunityView, ComparisonView, HistoryAction, HistoryView,
-    HomeAction, HomeView, ResultsAction, ResultsView, RunningView, SettingsAction, SettingsDialog,
+    CommunityAction, CommunityComparisonAction, CommunityComparisonView, CommunityFilters,
+    CommunityView, ComparisonView, HistoryAction, HistoryView, HomeAction, HomeView,
+    ResultsAction, ResultsView, RunningView,
 };
 use crate::ui::Theme;
 
@@ -50,22 +51,23 @@ enum AppState {
     Running,
     Results,
     History,
-    Comparison(usize, usize),       // Indices of runs to compare
-    ViewingHistoricRun(usize),      // Index of run to view
+    Comparison(usize, usize),        // Indices of runs to compare
+    ViewingHistoricRun(usize),       // Index of run to view
     CommunityBrowser(Option<usize>), // Browsing community, optional local run index for comparison
     OnlineComparison(usize, String), // Local run index, remote run ID
+    CommunityComparison(usize),      // Community comparison for run at index
 }
 
 /// Main application
 pub struct WorkBenchProApp {
     state: AppState,
     system_info: SystemInfo,
-    settings: BenchmarkSettings,
     runner: BenchmarkRunner,
     receiver: Option<Receiver<BenchmarkMessage>>,
 
     // Running state
     overall_progress: f32,
+    current_test_progress: f32,
     current_test: String,
     current_message: String,
     completed_tests: Vec<String>,
@@ -94,15 +96,17 @@ pub struct WorkBenchProApp {
     upload_success: bool,
     upload_run_index: Option<usize>, // Index of run being uploaded (None = last_run)
 
-    // Settings dialog state
-    show_settings_dialog: bool,
-    settings_backup: Option<BenchmarkSettings>,
-
     // Remove upload dialog state
     show_remove_upload_dialog: bool,
     remove_upload_password: String,
     remove_upload_error: Option<String>,
     remove_upload_run_index: Option<usize>,
+
+    // Community comparison state
+    community_statistics: Vec<TestStatistics>,
+    community_percentile_ranks: Vec<PercentileRank>,
+    comparison_loading: bool,
+    comparison_error: Option<String>,
 }
 
 impl WorkBenchProApp {
@@ -119,17 +123,13 @@ impl WorkBenchProApp {
         let history_runs = history_storage.load_all().unwrap_or_default();
         let history_selected = vec![false; history_runs.len()];
 
-        // Create default settings with machine name
-        let mut settings = BenchmarkSettings::default();
-        settings.machine_name = machine_name.clone();
-
         Self {
             state: AppState::Home,
             system_info,
-            settings,
             runner: BenchmarkRunner::new(),
             receiver: None,
             overall_progress: 0.0,
+            current_test_progress: 0.0,
             current_test: String::new(),
             current_message: String::new(),
             completed_tests: Vec::new(),
@@ -151,21 +151,24 @@ impl WorkBenchProApp {
             upload_error: None,
             upload_success: false,
             upload_run_index: None,
-            // Settings dialog
-            show_settings_dialog: false,
-            settings_backup: None,
 
             // Remove upload dialog
             show_remove_upload_dialog: false,
             remove_upload_password: String::new(),
             remove_upload_error: None,
             remove_upload_run_index: None,
+
+            // Community comparison
+            community_statistics: Vec::new(),
+            community_percentile_ranks: Vec::new(),
+            comparison_loading: false,
+            comparison_error: None,
         }
     }
 
     fn start_benchmark(&mut self) {
         // Create benchmark instances
-        let all_benchmarks: Vec<Box<dyn Benchmark>> = vec![
+        let benchmarks: Vec<Box<dyn Benchmark>> = vec![
             // Project Operations (disk + file operations)
             Box::new(FileEnumerationBenchmark::new()),
             Box::new(RandomReadBenchmark::new()),
@@ -202,32 +205,15 @@ impl WorkBenchProApp {
             Box::new(EnvironmentBenchmark::new()),
         ];
 
-        // Filter benchmarks based on settings
-        let benchmarks: Vec<Box<dyn Benchmark>> = all_benchmarks
-            .into_iter()
-            .filter(|b| {
-                // Filter by category
-                let category_enabled = match b.category() {
-                    Category::ProjectOperations => self.settings.run_project_operations,
-                    Category::BuildPerformance => self.settings.run_build_performance,
-                    Category::Responsiveness => self.settings.run_responsiveness,
-                };
-
-                // Filter synthetic benchmarks if requested
-                let synthetic_ok = !self.settings.skip_synthetic || !b.is_synthetic();
-
-                category_enabled && synthetic_ok
-            })
-            .collect();
-
         // Reset running state
         self.overall_progress = 0.0;
+        self.current_test_progress = 0.0;
         self.current_test = String::new();
         self.current_message = "Starting...".to_string();
         self.completed_tests.clear();
 
         // Start runner
-        let receiver = self.runner.start(benchmarks, self.settings.clone());
+        let receiver = self.runner.start(benchmarks);
         self.receiver = Some(receiver);
         self.state = AppState::Running;
     }
@@ -248,10 +234,12 @@ impl WorkBenchProApp {
                 match msg {
                     BenchmarkMessage::Progress {
                         benchmark_id: _,
-                        progress,
+                        overall_progress,
+                        test_progress,
                         message,
                     } => {
-                        self.overall_progress = progress;
+                        self.overall_progress = overall_progress;
+                        self.current_test_progress = test_progress;
                         self.current_message = message;
                     }
                     BenchmarkMessage::TestComplete { result } => {
@@ -428,6 +416,35 @@ impl WorkBenchProApp {
         }
     }
 
+    fn fetch_community_comparison(&mut self, run_id: &str) {
+        self.comparison_loading = true;
+        self.comparison_error = None;
+
+        // Fetch statistics
+        match self.cloud_client.fetch_statistics() {
+            Ok(stats) => {
+                self.community_statistics = stats;
+            }
+            Err(e) => {
+                self.comparison_error = Some(format!("Failed to fetch statistics: {}", e));
+                self.comparison_loading = false;
+                return;
+            }
+        }
+
+        // Fetch percentile ranks
+        match self.cloud_client.fetch_percentile_rank(run_id) {
+            Ok(ranks) => {
+                self.community_percentile_ranks = ranks;
+                self.comparison_loading = false;
+            }
+            Err(e) => {
+                self.comparison_error = Some(format!("Failed to fetch percentile ranks: {}", e));
+                self.comparison_loading = false;
+            }
+        }
+    }
+
     fn upload_run(&mut self, run: &BenchmarkRun) {
         self.upload_in_progress = true;
         self.upload_error = None;
@@ -467,23 +484,7 @@ impl WorkBenchProApp {
         self.upload_error = None;
         self.upload_success = false;
         self.upload_run_index = None;
-        self.upload_display_name = self.settings.machine_name.clone();
-    }
-
-    fn open_settings_dialog(&mut self) {
-        self.settings_backup = Some(self.settings.clone());
-        self.show_settings_dialog = true;
-    }
-
-    fn close_settings_dialog(&mut self, save: bool) {
-        if !save {
-            // Restore from backup on cancel
-            if let Some(backup) = self.settings_backup.take() {
-                self.settings = backup;
-            }
-        }
-        self.settings_backup = None;
-        self.show_settings_dialog = false;
+        self.upload_display_name = self.system_info.hostname.clone();
     }
 }
 
@@ -501,16 +502,18 @@ impl eframe::App for WorkBenchProApp {
         let mut historic_view_back = false;
         let mut community_action = CommunityAction::None;
         let mut online_comparison_back = false;
+        let mut community_comparison_action = CommunityComparisonAction::None;
 
         egui::CentralPanel::default().show(ctx, |ui| {
             match &self.state {
                 AppState::Home => {
-                    home_action = HomeView::show(ui, &self.system_info, &self.settings);
+                    home_action = HomeView::show(ui, &self.system_info);
                 }
                 AppState::Running => {
                     action_cancel = RunningView::show(
                         ui,
                         self.overall_progress,
+                        self.current_test_progress,
                         &self.current_test,
                         &self.current_message,
                         &self.completed_tests,
@@ -555,6 +558,22 @@ impl eframe::App for WorkBenchProApp {
                     ) {
                         online_comparison_back = ComparisonView::show(ui, local_run, remote_run);
                     }
+                }
+                AppState::CommunityComparison(idx) => {
+                    let run_name = self
+                        .history_runs
+                        .get(*idx)
+                        .map(|r| r.machine_name.as_str())
+                        .unwrap_or("Unknown");
+
+                    community_comparison_action = CommunityComparisonView::show(
+                        ui,
+                        &self.community_statistics,
+                        &self.community_percentile_ranks,
+                        self.comparison_loading,
+                        self.comparison_error.as_deref(),
+                        run_name,
+                    );
                 }
             }
         });
@@ -753,23 +772,6 @@ impl eframe::App for WorkBenchProApp {
             self.remove_upload();
         }
 
-        // Show settings dialog if active
-        let mut settings_action = SettingsAction::None;
-        if self.show_settings_dialog {
-            settings_action = SettingsDialog::show(ctx, &mut self.settings);
-        }
-
-        // Handle settings dialog actions
-        match settings_action {
-            SettingsAction::None => {}
-            SettingsAction::Save => {
-                self.close_settings_dialog(true);
-            }
-            SettingsAction::Cancel => {
-                self.close_settings_dialog(false);
-            }
-        }
-
         // Handle home actions
         match home_action {
             HomeAction::None => {}
@@ -779,9 +781,6 @@ impl eframe::App for WorkBenchProApp {
             HomeAction::History => {
                 self.reload_history();
                 self.state = AppState::History;
-            }
-            HomeAction::Settings => {
-                self.open_settings_dialog();
             }
         }
 
@@ -810,9 +809,19 @@ impl eframe::App for WorkBenchProApp {
                     self.browse_community();
                 }
             }
+            ResultsAction::CommunityComparison => {
+                // Find the last_run in history and use that for community comparison
+                if let Some(ref last) = self.last_run {
+                    if let Some(remote_id) = last.remote_id.clone() {
+                        let idx = self.history_runs.iter().position(|r| r.id == last.id).unwrap_or(0);
+                        self.state = AppState::CommunityComparison(idx);
+                        self.fetch_community_comparison(&remote_id);
+                    }
+                }
+            }
             ResultsAction::Upload => {
                 self.upload_run_index = None; // Upload last_run
-                self.upload_display_name = self.settings.machine_name.clone();
+                self.upload_display_name = self.system_info.hostname.clone();
                 self.show_upload_dialog = true;
             }
         }
@@ -842,9 +851,15 @@ impl eframe::App for WorkBenchProApp {
                 self.state = AppState::CommunityBrowser(Some(idx));
                 self.browse_community();
             }
+            HistoryAction::CommunityComparison(idx) => {
+                if let Some(remote_id) = self.history_runs.get(idx).and_then(|r| r.remote_id.clone()) {
+                    self.state = AppState::CommunityComparison(idx);
+                    self.fetch_community_comparison(&remote_id);
+                }
+            }
             HistoryAction::Upload(idx) => {
                 self.upload_run_index = Some(idx);
-                self.upload_display_name = self.settings.machine_name.clone();
+                self.upload_display_name = self.system_info.hostname.clone();
                 self.show_upload_dialog = true;
             }
             HistoryAction::RemoveUpload(idx) => {
@@ -871,6 +886,21 @@ impl eframe::App for WorkBenchProApp {
             }
             CommunityAction::Refresh | CommunityAction::FilterChanged => {
                 self.browse_community();
+            }
+        }
+
+        // Handle community comparison actions
+        match community_comparison_action {
+            CommunityComparisonAction::None => {}
+            CommunityComparisonAction::Back => {
+                self.state = AppState::History;
+            }
+            CommunityComparisonAction::Refresh => {
+                if let AppState::CommunityComparison(idx) = self.state {
+                    if let Some(remote_id) = self.history_runs.get(idx).and_then(|r| r.remote_id.clone()) {
+                        self.fetch_community_comparison(&remote_id);
+                    }
+                }
             }
         }
     }

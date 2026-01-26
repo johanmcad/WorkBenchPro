@@ -107,6 +107,46 @@ struct UploadPayload {
     system_info: serde_json::Value,
 }
 
+/// A histogram bucket for distribution visualization
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HistogramBucket {
+    pub bucket_start: f64,
+    pub bucket_end: f64,
+    pub count: i64,
+}
+
+/// Statistics for a single test across all community runs
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TestStatistics {
+    pub test_id: String,
+    pub test_name: String,
+    pub unit: String,
+    pub sample_count: i64,
+    pub min_value: f64,
+    pub max_value: f64,
+    pub mean_value: f64,
+    pub std_dev: f64,
+    pub p10: f64,
+    pub p25: f64,
+    pub p50: f64,
+    pub p75: f64,
+    pub p90: f64,
+    pub histogram_buckets: Vec<HistogramBucket>,
+}
+
+/// Percentile rank for a user's test result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PercentileRank {
+    pub test_id: String,
+    pub test_name: String,
+    pub unit: String,
+    pub user_value: f64,
+    pub percentile_rank: f64,
+    pub beats_count: i64,
+    pub total_count: i64,
+    pub is_higher_better: bool,
+}
+
 /// Client for interacting with the community benchmark database
 pub struct CloudClient {
     client: Client,
@@ -284,6 +324,54 @@ impl CloudClient {
             .ok_or_else(|| CloudError::Parse("No ID returned".to_string()))?;
 
         Ok(id)
+    }
+
+    /// Fetch test statistics with histogram buckets for all tests
+    pub fn fetch_statistics(&self) -> Result<Vec<TestStatistics>, CloudError> {
+        let url = format!("{}/rest/v1/rpc/get_test_statistics", SUPABASE_URL);
+
+        let response = self
+            .client
+            .post(&url)
+            .header("apikey", SUPABASE_ANON_KEY)
+            .header("Authorization", format!("Bearer {}", SUPABASE_ANON_KEY))
+            .header("Content-Type", "application/json")
+            .body("{}")
+            .send()?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().unwrap_or_default();
+            return Err(CloudError::Server(format!("{}: {}", status, body)));
+        }
+
+        let stats: Vec<TestStatistics> = response.json()?;
+        Ok(stats)
+    }
+
+    /// Fetch percentile rank for a specific run
+    pub fn fetch_percentile_rank(&self, run_id: &str) -> Result<Vec<PercentileRank>, CloudError> {
+        let url = format!("{}/rest/v1/rpc/get_percentile_rank", SUPABASE_URL);
+
+        let body = serde_json::json!({ "run_id": run_id });
+
+        let response = self
+            .client
+            .post(&url)
+            .header("apikey", SUPABASE_ANON_KEY)
+            .header("Authorization", format!("Bearer {}", SUPABASE_ANON_KEY))
+            .header("Content-Type", "application/json")
+            .json(&body)
+            .send()?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().unwrap_or_default();
+            return Err(CloudError::Server(format!("{}: {}", status, body)));
+        }
+
+        let ranks: Vec<PercentileRank> = response.json()?;
+        Ok(ranks)
     }
 }
 
