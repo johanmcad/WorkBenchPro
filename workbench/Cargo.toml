@@ -4,6 +4,11 @@ version = "1.0.0"
 edition = "2021"
 description = "WorkBench-Pro - Developer Workstation Benchmark"
 license = "MIT"
+repository = "https://github.com/johanmcad/workbench-pro"
+homepage = "https://github.com/johanmcad/workbench-pro"
+readme = "README.md"
+keywords = ["benchmark", "performance", "developer", "workstation", "windows"]
+categories = ["command-line-utilities", "development-tools"]
 
 [dependencies]
 # UI - using wgpu renderer with glow fallback (DirectX/Vulkan/GL/OpenGL)

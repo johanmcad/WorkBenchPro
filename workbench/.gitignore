@@ -1,1 +1,39 @@
+# Rust
 /target/
+Cargo.lock
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+
+# Build artifacts
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local configuration
+.cargo/
+
+# SwiftShader (bundled for development)
+/swiftshader/
+
+# Web frontend
+/web/node_modules/
+/web/dist/
+/web/.vite/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

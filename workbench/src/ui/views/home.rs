@@ -446,6 +446,39 @@ impl HomeView {
             });
 
             ui.add_space(4.0);
+
+            // About section - version and links
+            ui.add_space(12.0);
+            ui.separator();
+            ui.add_space(4.0);
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new(format!("v{}", env!("CARGO_PKG_VERSION")))
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::TEXT_SECONDARY),
+                );
+                ui.label(
+                    RichText::new("|")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::TEXT_SECONDARY),
+                );
+                ui.label(
+                    RichText::new("MIT License")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::TEXT_SECONDARY),
+                );
+                ui.label(
+                    RichText::new("|")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::TEXT_SECONDARY),
+                );
+                ui.hyperlink_to(
+                    RichText::new("GitHub")
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::ACCENT),
+                    "https://github.com/johanmcad/workbench-pro",
+                );
+            });
         });
 
         action
