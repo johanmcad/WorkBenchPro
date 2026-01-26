@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 
 // Test descriptions from benchmark specifications
 const TEST_DESCRIPTIONS = {
@@ -274,6 +274,19 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
   // Use inferred value based on unit
   const isHigherBetter = inferHigherIsBetter(unit)
 
+  // Check if any selection is significantly slow
+  const hasSlowResult = testSelections.some(sel => {
+    const userValue = sel.percentile?.user_value
+    if (isHigherBetter) {
+      // Higher is better: check if below P25 (if available) or significantly below median
+      const slowThreshold = p25 !== undefined ? p25 : p50 * 0.5
+      return userValue !== undefined && userValue < slowThreshold
+    } else {
+      // Lower is better: check if above P75
+      return userValue !== undefined && p75 !== undefined && userValue > p75
+    }
+  })
+
   // Calculate positions for each selection
   const range = max_value - min_value
   let medianPosition = range > 0 ? ((p50 - min_value) / range) * 100 : 50
@@ -313,9 +326,15 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
           {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </div>
 
-        {/* Test name - fixed width */}
-        <div className="w-44 shrink-0">
-          <span className="text-xs truncate" title={test_name}>
+        {/* Test name - fixed width, red with warning if significantly slow */}
+        <div className="w-44 shrink-0 flex items-center gap-1">
+          {hasSlowResult && (
+            <AlertTriangle size={12} className="text-red-400 shrink-0" />
+          )}
+          <span
+            className={`text-xs truncate ${hasSlowResult ? 'text-red-400 font-medium' : ''}`}
+            title={hasSlowResult ? `${test_name} - Significantly slower than average` : test_name}
+          >
             {test_name}
           </span>
         </div>
@@ -413,30 +432,6 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
               <div className="text-wb-text-secondary text-[10px]">Max</div>
               <div className="text-white">{formatValue(max_value)} {unit}</div>
             </div>
-            {p25 !== undefined && (
-              <div>
-                <div className="text-wb-text-secondary text-[10px]">P25</div>
-                <div className="text-white">{formatValue(p25)} {unit}</div>
-              </div>
-            )}
-            {p75 !== undefined && (
-              <div>
-                <div className="text-wb-text-secondary text-[10px]">P75</div>
-                <div className="text-white">{formatValue(p75)} {unit}</div>
-              </div>
-            )}
-            {p90 !== undefined && (
-              <div>
-                <div className="text-wb-text-secondary text-[10px]">P90</div>
-                <div className="text-white">{formatValue(p90)} {unit}</div>
-              </div>
-            )}
-            {p95 !== undefined && (
-              <div>
-                <div className="text-wb-text-secondary text-[10px]">P95</div>
-                <div className="text-white">{formatValue(p95)} {unit}</div>
-              </div>
-            )}
             {sample_count !== undefined && (
               <div>
                 <div className="text-wb-text-secondary text-[10px]">Samples</div>
