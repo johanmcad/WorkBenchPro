@@ -335,15 +335,6 @@ function TestRow({ test, isExpanded, onToggle }) {
             {formatValue(rightValue)}
           </span>
         </div>
-
-        {/* User value */}
-        <div className="flex items-center gap-2 shrink-0">
-          {userValue !== undefined && (
-            <span className="text-[10px] text-green-400 font-medium whitespace-nowrap">
-              {formatValue(userValue)} {unit}
-            </span>
-          )}
-        </div>
       </div>
 
       {/* Expanded details */}
