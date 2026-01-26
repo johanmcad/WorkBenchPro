@@ -45,9 +45,9 @@ const TEST_DESCRIPTIONS = {
     why: 'Affects Start menu search, File Explorer search, Outlook search.',
   },
   'Antivirus Impact': {
-    what: 'Measures Windows Defender real-time scanning overhead.',
-    how: 'Performs file operations and measures the time difference when Defender is actively scanning.',
-    why: 'Shows antivirus impact on build times and file operations.',
+    what: 'Measures Windows Defender real-time scanning overhead on file operations.',
+    how: 'Creates files with suspicious extensions (.exe, .dll, .ps1, .bat, .js) that trigger AV scanning. For .exe/.dll files, writes fake PE headers to look like real executables. Measures create, modify, read, and delete operations across multiple iterations.',
+    why: 'Antivirus scans executable-like files aggressively. High values indicate builds, npm install, and file operations are being slowed by real-time scanning. Fast systems show ~0.5 ms/op, while heavy AV overhead can cause 2-5+ ms/op.',
   },
   'Symlink Operations': {
     what: 'Tests symbolic link creation and resolution.',
