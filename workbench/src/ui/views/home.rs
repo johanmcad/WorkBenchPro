@@ -132,7 +132,7 @@ impl TestSpecs {
             TestSpec {
                 name: "Archive Operations",
                 what_it_does: "Tests archive compression and extraction speed.",
-                how_it_works: "Creates 1,500 text files (~50MB total) across 30 directories, then compresses with tar -czf and extracts with tar -xzf. Repeated 5 times each.",
+                how_it_works: "Creates 250 text files across 16 directories, then compresses with tar -czf and extracts with tar -xzf. Repeated 3 times each.",
                 measures: "Total time in seconds",
                 relevance: "Affects npm install, artifact packaging, backup operations",
             },

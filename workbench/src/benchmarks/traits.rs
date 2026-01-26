@@ -85,8 +85,8 @@ impl Default for BenchmarkConfig {
             // Apps - Quick preset
             app_csharp_files: 3,
             app_csharp_functions: 15,
-            app_archive_files: 500,
-            app_compression_files: 500,
+            app_archive_files: 250,
+            app_compression_files: 250,
             app_robocopy_files: 400,
             app_defender_files: 50,
         }

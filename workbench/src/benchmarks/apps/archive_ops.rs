@@ -119,7 +119,7 @@ impl Benchmark for ArchiveOpsBenchmark {
     }
 
     fn description(&self) -> &'static str {
-        "Compress and extract 1500 files (~50MB) using tar"
+        "Compress and extract 250 files using tar"
     }
 
     fn category(&self) -> Category {
