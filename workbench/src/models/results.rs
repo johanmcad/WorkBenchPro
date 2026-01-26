@@ -13,7 +13,12 @@ pub struct BenchmarkRun {
     pub tags: Vec<String>,
     pub system_info: SystemInfo,
     pub results: CategoryResults,
-    pub scores: Scores,
+    /// Optional remote ID for online comparison service
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub remote_id: Option<String>,
+    /// Timestamp when results were uploaded to remote service
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub uploaded_at: Option<DateTime<Utc>>,
 }
 
 impl BenchmarkRun {
@@ -26,7 +31,8 @@ impl BenchmarkRun {
             tags: Vec::new(),
             system_info,
             results: CategoryResults::default(),
-            scores: Scores::default(),
+            remote_id: None,
+            uploaded_at: None,
         }
     }
 }
@@ -36,7 +42,6 @@ pub struct CategoryResults {
     pub project_operations: Vec<TestResult>,
     pub build_performance: Vec<TestResult>,
     pub responsiveness: Vec<TestResult>,
-    pub graphics: Option<Vec<TestResult>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -46,19 +51,7 @@ pub struct TestResult {
     pub description: String,
     pub value: f64,
     pub unit: String,
-    pub score: u32,
-    pub max_score: u32,
     pub details: TestDetails,
-}
-
-impl TestResult {
-    pub fn score_percentage(&self) -> f64 {
-        if self.max_score == 0 {
-            0.0
-        } else {
-            (self.score as f64 / self.max_score as f64) * 100.0
-        }
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -128,84 +121,3 @@ impl Percentiles {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Scores {
-    pub overall: u32,
-    pub overall_max: u32,
-    pub rating: Rating,
-    pub categories: CategoryScores,
-}
-
-impl Scores {
-    pub fn percentage(&self) -> f64 {
-        if self.overall_max == 0 {
-            0.0
-        } else {
-            (self.overall as f64 / self.overall_max as f64) * 100.0
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct CategoryScores {
-    pub project_operations: CategoryScore,
-    pub build_performance: CategoryScore,
-    pub responsiveness: CategoryScore,
-    pub graphics: Option<CategoryScore>,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct CategoryScore {
-    pub score: u32,
-    pub max_score: u32,
-    pub percentage: f64,
-    pub rating: Rating,
-}
-
-impl CategoryScore {
-    pub fn new(score: u32, max_score: u32) -> Self {
-        let percentage = if max_score == 0 {
-            0.0
-        } else {
-            (score as f64 / max_score as f64) * 100.0
-        };
-        Self {
-            score,
-            max_score,
-            percentage,
-            rating: Rating::from_percentage(percentage),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
-pub enum Rating {
-    Excellent,
-    Good,
-    Acceptable,
-    #[default]
-    Poor,
-    Inadequate,
-}
-
-impl Rating {
-    pub fn from_percentage(pct: f64) -> Self {
-        match pct {
-            p if p >= 90.0 => Rating::Excellent,
-            p if p >= 70.0 => Rating::Good,
-            p if p >= 50.0 => Rating::Acceptable,
-            p if p >= 30.0 => Rating::Poor,
-            _ => Rating::Inadequate,
-        }
-    }
-
-    pub fn label(&self) -> &'static str {
-        match self {
-            Rating::Excellent => "Excellent",
-            Rating::Good => "Good",
-            Rating::Acceptable => "Acceptable",
-            Rating::Poor => "Poor",
-            Rating::Inadequate => "Inadequate",
-        }
-    }
-}
