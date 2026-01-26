@@ -10,6 +10,7 @@ import {
   X,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
 } from 'lucide-react'
 import { fetchBenchmarkRuns, fetchBenchmarkRun, fetchTestStatistics, fetchPercentileRank, deleteBenchmarkRun } from '../api'
 import CompactComparisonChart from '../components/CompactComparisonChart'
@@ -29,6 +30,7 @@ export default function ResultsPage() {
 
   // UI state
   const [panelCollapsed, setPanelCollapsed] = useState(false)
+  const [filterText, setFilterText] = useState('')
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -172,7 +174,20 @@ export default function ResultsPage() {
         </div>
 
         {!panelCollapsed && (
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto flex flex-col">
+            {/* Filter input */}
+            <div className="p-2 border-b border-wb-border">
+              <div className="relative">
+                <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-wb-text-secondary" />
+                <input
+                  type="text"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder="Filter..."
+                  className="w-full pl-7 pr-2 py-1 text-xs bg-wb-bg-secondary border border-wb-border rounded focus:outline-none focus:border-wb-accent"
+                />
+              </div>
+            </div>
             {loadingList ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 size={24} className="animate-spin text-wb-accent" />
@@ -182,8 +197,12 @@ export default function ResultsPage() {
                 No results yet
               </div>
             ) : (
-              <div className="divide-y divide-wb-border/50">
-                {results.map((result) => (
+              <div className="divide-y divide-wb-border/50 flex-1 overflow-y-auto">
+                {results.filter(r =>
+                  !filterText ||
+                  r.display_name?.toLowerCase().includes(filterText.toLowerCase()) ||
+                  r.cpu_name?.toLowerCase().includes(filterText.toLowerCase())
+                ).map((result) => (
                   <button
                     key={result.id}
                     onClick={() => setSelectedId(result.id)}
