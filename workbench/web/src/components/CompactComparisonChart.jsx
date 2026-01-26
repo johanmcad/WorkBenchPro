@@ -274,16 +274,16 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
   // Use inferred value based on unit
   const isHigherBetter = inferHigherIsBetter(unit)
 
-  // Check if any selection is significantly slow
+  // Check if any selection is significantly slow (2x worse than median)
   const hasSlowResult = testSelections.some(sel => {
     const userValue = sel.percentile?.user_value
+    if (userValue === undefined || p50 === undefined) return false
     if (isHigherBetter) {
-      // Higher is better: check if below P25 (if available) or significantly below median
-      const slowThreshold = p25 !== undefined ? p25 : p50 * 0.5
-      return userValue !== undefined && userValue < slowThreshold
+      // Higher is better: slow if less than half the median throughput
+      return userValue < p50 / 2
     } else {
-      // Lower is better: check if above P75
-      return userValue !== undefined && p75 !== undefined && userValue > p75
+      // Lower is better: slow if more than 2x the median time
+      return userValue > p50 * 2
     }
   })
 
