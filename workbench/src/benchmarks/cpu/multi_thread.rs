@@ -6,7 +6,7 @@ use lz4_flex::{compress_prepend_size, decompress_size_prepended};
 use rand::Rng;
 use rayon::prelude::*;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -51,10 +51,10 @@ impl Benchmark for MultiThreadBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         let chunk_size: usize = 64 * 1024; // 64KB chunks
         let num_threads = rayon::current_num_threads();
-        let chunks_per_thread = 1000;
+        let chunks_per_thread = config.cpu_multi_thread_chunks as usize;
         let total_chunks = num_threads * chunks_per_thread;
 
         progress.update(0.0, &format!("Preparing {} threads...", num_threads));
@@ -86,7 +86,7 @@ impl Benchmark for MultiThreadBenchmark {
         progress.update(0.2, "Running parallel benchmark...");
 
         let mut throughputs: Vec<f64> = Vec::new();
-        let num_runs = 3;
+        let num_runs = config.iterations as usize;
 
         for run in 0..num_runs {
             if progress.is_cancelled() {

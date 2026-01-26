@@ -5,7 +5,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{system_command, system32_path, CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -93,7 +93,7 @@ impl Benchmark for AppLaunchBenchmark {
         45
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Setup
         let _ = fs::remove_dir_all(&self.test_dir);
         fs::create_dir_all(&self.test_dir)?;
@@ -122,9 +122,10 @@ impl Benchmark for AppLaunchBenchmark {
             );
 
             let mut times: Vec<f64> = Vec::new();
+            let iterations = config.iterations as usize;
 
             // Run multiple iterations
-            for _ in 0..5 {
+            for _ in 0..iterations {
                 if progress.is_cancelled() {
                     self.cleanup();
                     return Err(anyhow::anyhow!("Cancelled"));

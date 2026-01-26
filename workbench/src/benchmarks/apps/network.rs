@@ -2,7 +2,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -43,7 +43,7 @@ impl Benchmark for NetworkBenchmark {
         30
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, _config: &BenchmarkConfig) -> Result<TestResult> {
         progress.update(0.05, "Preparing network benchmark...");
 
         let is_windows = cfg!(target_os = "windows");

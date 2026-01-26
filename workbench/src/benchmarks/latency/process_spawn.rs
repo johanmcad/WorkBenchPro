@@ -2,7 +2,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{system32_path, CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -62,8 +62,8 @@ impl Benchmark for ProcessSpawnBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        let num_spawns: usize = 100;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        let num_spawns: usize = config.lat_process_spawn_count as usize;
         let mut spawn_times_ms: Vec<f64> = Vec::with_capacity(num_spawns);
 
         progress.update(0.0, "Warming up...");

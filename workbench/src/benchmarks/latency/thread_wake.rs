@@ -4,7 +4,7 @@ use std::thread;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -49,8 +49,8 @@ impl Benchmark for ThreadWakeBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        let num_wakes: usize = 1000;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        let num_wakes: usize = config.lat_thread_wake_count as usize;
         let mut wake_times_us: Vec<f64> = Vec::with_capacity(num_wakes);
 
         progress.update(0.0, "Setting up thread wake test...");

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use rand::Rng;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -58,8 +58,8 @@ impl Benchmark for SustainedWriteBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        let total_size: u64 = 4 * 1024 * 1024 * 1024; // 4GB
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        let total_size: u64 = config.cpu_sustained_write_gb as u64 * 1024 * 1024 * 1024;
         let chunk_size: usize = 4 * 1024 * 1024; // 4MB chunks
         let fsync_interval = 64; // fsync every 64 chunks (256MB)
         let num_chunks = (total_size / chunk_size as u64) as usize;
@@ -74,7 +74,7 @@ impl Benchmark for SustainedWriteBenchmark {
         progress.update(0.05, "Starting sustained write...");
 
         let mut throughputs: Vec<f64> = Vec::new();
-        let num_runs = 2; // Fewer runs due to large data size
+        let num_runs = config.iterations.min(2) as usize; // Capped at 2 due to large data size
 
         for run in 0..num_runs {
             if progress.is_cancelled() {

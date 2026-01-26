@@ -2,9 +2,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::{Arc, Mutex};
 use std::thread;
 
-use anyhow::Result;
-
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::models::{BenchmarkRun, CategoryResults, TestResult};
 
 use super::SystemInfoCollector;
@@ -14,7 +12,8 @@ use super::SystemInfoCollector;
 pub enum BenchmarkMessage {
     Progress {
         benchmark_id: String,
-        progress: f32,
+        overall_progress: f32,
+        test_progress: f32,
         message: String,
     },
     TestComplete {
@@ -27,15 +26,6 @@ pub enum BenchmarkMessage {
         error: String,
     },
     Cancelled,
-}
-
-/// Configuration for a benchmark run
-#[derive(Debug, Clone, Default)]
-pub struct RunConfig {
-    pub machine_name: String,
-    /// Skip synthetic benchmarks (CPU, disk, latency, memory microbenchmarks)
-    /// and only run real application benchmarks
-    pub skip_synthetic: bool,
 }
 
 /// Runs benchmarks in a background thread
@@ -54,11 +44,10 @@ impl BenchmarkRunner {
         }
     }
 
-    /// Start running benchmarks with the given configuration
+    /// Start running benchmarks
     pub fn start(
         &mut self,
         benchmarks: Vec<Box<dyn Benchmark>>,
-        config: RunConfig,
     ) -> Receiver<BenchmarkMessage> {
         let (tx, rx) = channel();
         self.sender = Some(tx.clone());
@@ -67,7 +56,7 @@ impl BenchmarkRunner {
         let cancel_flag = Arc::clone(&self.cancel_flag);
 
         let handle = thread::spawn(move || {
-            Self::run_benchmarks(tx, benchmarks, config, cancel_flag);
+            Self::run_benchmarks(tx, benchmarks, cancel_flag);
         });
 
         self.handle = Some(handle);
@@ -92,21 +81,19 @@ impl BenchmarkRunner {
     fn run_benchmarks(
         tx: Sender<BenchmarkMessage>,
         benchmarks: Vec<Box<dyn Benchmark>>,
-        config: RunConfig,
         cancel_flag: Arc<Mutex<bool>>,
     ) {
         // Collect system info
         let system_info = SystemInfoCollector::collect();
-        let machine_name = if config.machine_name.is_empty() {
-            system_info.hostname.clone()
-        } else {
-            config.machine_name.clone()
-        };
+        let machine_name = system_info.hostname.clone();
 
         let mut run = BenchmarkRun::new(machine_name, system_info);
         let mut results = CategoryResults::default();
 
         let total = benchmarks.len();
+
+        // Use default benchmark config (Quick preset)
+        let benchmark_config = BenchmarkConfig::default();
 
         for (idx, benchmark) in benchmarks.into_iter().enumerate() {
             // Check for cancellation
@@ -115,21 +102,25 @@ impl BenchmarkRunner {
                 return;
             }
 
+            let overall_progress = idx as f32 / total as f32;
+
             let progress_callback = ChannelProgressCallback {
                 tx: tx.clone(),
                 benchmark_id: benchmark.id().to_string(),
                 cancel_flag: Arc::clone(&cancel_flag),
+                overall_progress,
             };
 
             // Send initial progress
             let _ = tx.send(BenchmarkMessage::Progress {
                 benchmark_id: benchmark.id().to_string(),
-                progress: idx as f32 / total as f32,
+                overall_progress,
+                test_progress: 0.0,
                 message: format!("Running {} ({}/{})", benchmark.name(), idx + 1, total),
             });
 
             // Run the benchmark
-            match benchmark.run(&progress_callback) {
+            match benchmark.run(&progress_callback, &benchmark_config) {
                 Ok(result) => {
                     // Categorize the result
                     match benchmark.category() {
@@ -171,13 +162,15 @@ struct ChannelProgressCallback {
     tx: Sender<BenchmarkMessage>,
     benchmark_id: String,
     cancel_flag: Arc<Mutex<bool>>,
+    overall_progress: f32,
 }
 
 impl ProgressCallback for ChannelProgressCallback {
     fn update(&self, progress: f32, message: &str) {
         let _ = self.tx.send(BenchmarkMessage::Progress {
             benchmark_id: self.benchmark_id.clone(),
-            progress,
+            overall_progress: self.overall_progress,
+            test_progress: progress,
             message: message.to_string(),
         });
     }

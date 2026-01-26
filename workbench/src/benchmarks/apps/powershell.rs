@@ -4,7 +4,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -167,7 +167,7 @@ impl Benchmark for PowerShellBenchmark {
         60
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Check if PowerShell is available
         if !Self::is_powershell_available() {
             return Err(anyhow::anyhow!("PowerShell is not installed or not in PATH"));
@@ -197,7 +197,8 @@ impl Benchmark for PowerShellBenchmark {
             );
 
             // Run each script multiple times
-            for _ in 0..5 {
+            let iterations = config.iterations as usize;
+            for _ in 0..iterations {
                 if progress.is_cancelled() {
                     self.cleanup();
                     return Err(anyhow::anyhow!("Cancelled"));

@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -49,7 +49,7 @@ impl Benchmark for EventLogBenchmark {
         45
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, _config: &BenchmarkConfig) -> Result<TestResult> {
         if !Self::is_available() {
             return Err(anyhow::anyhow!("wevtutil not available (Windows only)"));
         }

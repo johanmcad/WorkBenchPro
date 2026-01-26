@@ -7,7 +7,7 @@ use lz4_flex::compress_prepend_size;
 use rand::Rng;
 use rayon::prelude::*;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -24,15 +24,14 @@ impl MixedWorkloadBenchmark {
         }
     }
 
-    fn setup(&self, progress: &dyn ProgressCallback) -> Result<Vec<PathBuf>> {
+    fn setup_with_count(&self, progress: &dyn ProgressCallback, num_files: u32) -> Result<Vec<PathBuf>> {
         progress.update(0.0, "Creating test files...");
 
         fs::create_dir_all(&self.test_dir)?;
 
-        let num_files = 500;
         let file_size = 64 * 1024; // 64KB per file
         let mut rng = rand::thread_rng();
-        let mut files = Vec::with_capacity(num_files);
+        let mut files = Vec::with_capacity(num_files as usize);
 
         for i in 0..num_files {
             if progress.is_cancelled() {
@@ -64,6 +63,11 @@ impl MixedWorkloadBenchmark {
         }
 
         Ok(files)
+    }
+
+    #[allow(dead_code)]
+    fn setup(&self, progress: &dyn ProgressCallback) -> Result<Vec<PathBuf>> {
+        self.setup_with_count(progress, 500)
     }
 
     fn cleanup(&self) {
@@ -102,14 +106,14 @@ impl Benchmark for MixedWorkloadBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        // Setup
-        let input_files = self.setup(progress)?;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        // Setup with configured file count
+        let input_files = self.setup_with_count(progress, config.cpu_mixed_file_count)?;
 
         progress.update(0.2, "Running mixed workload...");
 
         let mut throughputs: Vec<f64> = Vec::new();
-        let num_runs = 3;
+        let num_runs = config.iterations as usize;
 
         for run in 0..num_runs {
             if progress.is_cancelled() {

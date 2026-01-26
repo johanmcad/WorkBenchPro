@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use rand::Rng;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
 
@@ -21,11 +21,10 @@ impl RandomReadBenchmark {
         }
     }
 
-    fn setup(&self, progress: &dyn ProgressCallback) -> Result<()> {
-        progress.update(0.0, "Creating test file (1GB)...");
+    fn setup_with_size(&self, progress: &dyn ProgressCallback, size_mb: u32) -> Result<()> {
+        progress.update(0.0, &format!("Creating test file ({}MB)...", size_mb));
 
-        // Create 1GB file
-        let file_size: u64 = 1024 * 1024 * 1024; // 1GB
+        let file_size: u64 = size_mb as u64 * 1024 * 1024;
         let chunk_size: usize = 1024 * 1024; // 1MB chunks
         let num_chunks = (file_size / chunk_size as u64) as usize;
 
@@ -89,15 +88,17 @@ impl Benchmark for RandomReadBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        // Setup
-        self.setup(progress)?;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        let file_size_mb = config.disk_random_read_file_mb;
+        let num_reads = config.disk_random_read_count as usize;
+
+        // Setup with configured file size
+        self.setup_with_size(progress, file_size_mb)?;
 
         progress.update(0.3, "Running random read tests...");
 
-        let file_size: u64 = 1024 * 1024 * 1024;
+        let file_size: u64 = file_size_mb as u64 * 1024 * 1024;
         let read_size: usize = 4096; // 4KB
-        let num_reads = 10_000;
         let max_offset = file_size - read_size as u64;
 
         let mut file = File::open(&self.test_file)?;

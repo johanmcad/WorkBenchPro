@@ -4,7 +4,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -29,7 +29,7 @@ impl ArchiveOpsBenchmark {
             .unwrap_or(false)
     }
 
-    fn setup_test_files(&self, progress: &dyn ProgressCallback) -> Result<PathBuf> {
+    fn setup_test_files(&self, progress: &dyn ProgressCallback, file_count: u32) -> Result<PathBuf> {
         let source_dir = self.test_dir.join("source");
 
         // Clean up any existing test directory
@@ -39,9 +39,10 @@ impl ArchiveOpsBenchmark {
         progress.update(0.05, "Creating test files...");
 
         // Create a realistic file structure (simulating a project)
-        let num_dirs = 30;
-        let files_per_dir = 50;
+        let num_dirs = (file_count as f32).sqrt().ceil() as usize;
+        let files_per_dir = (file_count as usize + num_dirs - 1) / num_dirs;
 
+        let mut files_created = 0usize;
         for d in 0..num_dirs {
             if progress.is_cancelled() {
                 return Err(anyhow::anyhow!("Cancelled"));
@@ -51,6 +52,10 @@ impl ArchiveOpsBenchmark {
             fs::create_dir_all(&dir_path)?;
 
             for f in 0..files_per_dir {
+                if files_created >= file_count as usize {
+                    break;
+                }
+
                 let file_path = dir_path.join(format!("file_{:03}.txt", f));
 
                 // Create varied content sizes
@@ -79,12 +84,13 @@ impl ArchiveOpsBenchmark {
                     .collect();
 
                 fs::write(&file_path, content)?;
+                files_created += 1;
             }
 
             if d % 5 == 0 {
                 progress.update(
                     0.05 + (d as f32 / num_dirs as f32) * 0.15,
-                    &format!("Creating files... {}/{} dirs", d, num_dirs),
+                    &format!("Creating files... {}/{}", files_created, file_count),
                 );
             }
         }
@@ -124,14 +130,14 @@ impl Benchmark for ArchiveOpsBenchmark {
         45
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Check if tar is available
         if !Self::is_tar_available() {
             return Err(anyhow::anyhow!("tar is not installed or not in PATH"));
         }
 
-        // Setup test files
-        let source_dir = self.setup_test_files(progress)?;
+        // Setup test files with configured count
+        let source_dir = self.setup_test_files(progress, config.app_archive_files)?;
 
         let archive_path = self.test_dir.join("archive.tar.gz");
         let extract_dir = self.test_dir.join("extracted");
@@ -140,8 +146,9 @@ impl Benchmark for ArchiveOpsBenchmark {
 
         let mut compress_times: Vec<f64> = Vec::new();
         let mut extract_times: Vec<f64> = Vec::new();
+        let iterations = config.iterations as usize;
 
-        for i in 0..5 {
+        for i in 0..iterations {
             if progress.is_cancelled() {
                 self.cleanup();
                 return Err(anyhow::anyhow!("Cancelled"));
@@ -165,8 +172,8 @@ impl Benchmark for ArchiveOpsBenchmark {
             compress_times.push(timer.elapsed_secs());
 
             progress.update(
-                0.2 + (i as f32 / 5.0) * 0.3,
-                &format!("Compress {}/5...", i + 1),
+                0.2 + (i as f32 / iterations as f32) * 0.3,
+                &format!("Compress {}/{}...", i + 1, iterations),
             );
 
             // Extract
@@ -185,8 +192,8 @@ impl Benchmark for ArchiveOpsBenchmark {
             extract_times.push(timer.elapsed_secs());
 
             progress.update(
-                0.5 + (i as f32 / 5.0) * 0.35,
-                &format!("Extract {}/5...", i + 1),
+                0.5 + (i as f32 / iterations as f32) * 0.35,
+                &format!("Extract {}/{}...", i + 1, iterations),
             );
         }
 

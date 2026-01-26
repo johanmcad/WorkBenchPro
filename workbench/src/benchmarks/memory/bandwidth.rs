@@ -1,7 +1,7 @@
 use anyhow::Result;
 use rayon::prelude::*;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -46,10 +46,9 @@ impl Benchmark for MemoryBandwidthBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         let num_threads = rayon::current_num_threads();
-        // Use 256MB per thread, minimum 1GB total
-        let per_thread_size: usize = 256 * 1024 * 1024;
+        let per_thread_size: usize = config.mem_bandwidth_buffer_mb as usize * 1024 * 1024;
         let total_size = per_thread_size * num_threads;
 
         progress.update(0.0, &format!("Allocating {} GB across {} threads...",
@@ -84,7 +83,7 @@ impl Benchmark for MemoryBandwidthBenchmark {
         progress.update(0.2, "Measuring memory bandwidth...");
 
         let mut bandwidths: Vec<f64> = Vec::new();
-        let num_runs = 5;
+        let num_runs = config.iterations as usize;
         let copies_per_run = 3; // Multiple copies per timing run
 
         for run in 0..num_runs {

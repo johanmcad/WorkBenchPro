@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{system_command, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -30,7 +30,7 @@ impl RobocopyBenchmark {
             .unwrap_or(false)
     }
 
-    fn setup_source_files(&self, progress: &dyn ProgressCallback) -> Result<PathBuf> {
+    fn setup_source_files(&self, progress: &dyn ProgressCallback, file_count: u32) -> Result<PathBuf> {
         let source_dir = self.test_dir.join("source");
 
         // Clean up any existing test directory
@@ -40,9 +40,10 @@ impl RobocopyBenchmark {
         progress.update(0.05, "Creating source files...");
 
         // Create a realistic directory structure
-        let num_dirs = 20;
-        let files_per_dir = 50;
+        let num_dirs = (file_count as f32 / 60.0).ceil() as usize; // ~60 files per dir including subdir
+        let files_per_dir = (file_count as usize + num_dirs - 1) / num_dirs;
 
+        let mut files_created = 0usize;
         for d in 0..num_dirs {
             if progress.is_cancelled() {
                 return Err(anyhow::anyhow!("Cancelled"));
@@ -56,6 +57,10 @@ impl RobocopyBenchmark {
             fs::create_dir_all(&sub_dir)?;
 
             for f in 0..files_per_dir {
+                if files_created >= file_count as usize {
+                    break;
+                }
+
                 // Vary file sizes
                 let size = match f % 5 {
                     0 => 1024,       // 1KB small files
@@ -72,18 +77,20 @@ impl RobocopyBenchmark {
 
                 let file_path = dir_path.join(format!("file_{:03}.dat", f));
                 fs::write(&file_path, &content)?;
+                files_created += 1;
 
                 // Some files in subdirectory
-                if f < 10 {
+                if f < 10 && files_created < file_count as usize {
                     let sub_file = sub_dir.join(format!("subfile_{:03}.dat", f));
                     fs::write(&sub_file, &content)?;
+                    files_created += 1;
                 }
             }
 
             if d % 5 == 0 {
                 progress.update(
                     0.05 + (d as f32 / num_dirs as f32) * 0.15,
-                    &format!("Creating files... {}/{} dirs", d, num_dirs),
+                    &format!("Creating files... {}/{}", files_created, file_count),
                 );
             }
         }
@@ -123,21 +130,22 @@ impl Benchmark for RobocopyBenchmark {
         45
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Check if robocopy is available
         if !Self::is_robocopy_available() {
             return Err(anyhow::anyhow!("Robocopy is not available (Windows only)"));
         }
 
-        // Setup source files
-        let source_dir = self.setup_source_files(progress)?;
+        // Setup source files with configured count
+        let source_dir = self.setup_source_files(progress, config.app_robocopy_files)?;
 
         progress.update(0.2, "Running robocopy benchmarks...");
 
         let mut copy_times: Vec<f64> = Vec::new();
         let mut mirror_times: Vec<f64> = Vec::new();
+        let iterations = config.iterations as usize;
 
-        for i in 0..5 {
+        for i in 0..iterations {
             if progress.is_cancelled() {
                 self.cleanup();
                 return Err(anyhow::anyhow!("Cancelled"));
@@ -176,8 +184,8 @@ impl Benchmark for RobocopyBenchmark {
             copy_times.push(copy_time);
 
             progress.update(
-                0.2 + (i as f32 / 5.0) * 0.3,
-                &format!("Copy test {}/5...", i + 1),
+                0.2 + (i as f32 / iterations as f32) * 0.3,
+                &format!("Copy test {}/{}...", i + 1, iterations),
             );
 
             // Test 2: Mirror copy with /MIR
@@ -205,8 +213,8 @@ impl Benchmark for RobocopyBenchmark {
             mirror_times.push(mirror_time);
 
             progress.update(
-                0.5 + (i as f32 / 5.0) * 0.4,
-                &format!("Mirror test {}/5...", i + 1),
+                0.5 + (i as f32 / iterations as f32) * 0.4,
+                &format!("Mirror test {}/{}...", i + 1, iterations),
             );
         }
 

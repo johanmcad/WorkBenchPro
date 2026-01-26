@@ -4,7 +4,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -652,7 +652,7 @@ impl Benchmark for CSharpCompileBenchmark {
         30
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Find csc.exe
         let csc_path = Self::find_csc()
             .ok_or_else(|| anyhow::anyhow!("C# compiler (csc.exe) not found. .NET Framework may not be installed."))?;
@@ -674,7 +674,7 @@ impl Benchmark for CSharpCompileBenchmark {
         progress.update(0.3, "Running compilation benchmarks...");
 
         // Run multiple compilation iterations
-        let iterations = 5;
+        let iterations = config.iterations as usize;
         for i in 0..iterations {
             if progress.is_cancelled() {
                 self.cleanup();
@@ -749,7 +749,7 @@ impl Benchmark for CSharpCompileBenchmark {
             value: avg_time,
             unit: "s".to_string(),
             details: TestDetails {
-                iterations: iterations as u32,
+                iterations: config.iterations,
                 duration_secs: compile_times.iter().sum(),
                 min,
                 max,

@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
 
@@ -20,7 +20,7 @@ impl FileEnumerationBenchmark {
         }
     }
 
-    fn setup(&self, progress: &dyn ProgressCallback) -> Result<()> {
+    fn setup_with_count(&self, progress: &dyn ProgressCallback, file_count: u32) -> Result<()> {
         progress.update(0.0, "Setting up test files...");
 
         // Clean up any previous run
@@ -30,10 +30,10 @@ impl FileEnumerationBenchmark {
 
         fs::create_dir_all(&self.test_dir)?;
 
-        // Create 30,000 files in 500 directories
-        let num_dirs = 500;
-        let files_per_dir = 60;
-        let total_files = num_dirs * files_per_dir;
+        // Calculate directories and files per directory
+        let num_dirs = (file_count as f32).sqrt().ceil() as u32;
+        let files_per_dir = (file_count + num_dirs - 1) / num_dirs;
+        let total_files = file_count;
 
         for dir_idx in 0..num_dirs {
             if progress.is_cancelled() {
@@ -44,6 +44,10 @@ impl FileEnumerationBenchmark {
             fs::create_dir_all(&dir_path)?;
 
             for file_idx in 0..files_per_dir {
+                // Stop if we've created enough files
+                if dir_idx * files_per_dir + file_idx >= total_files {
+                    break;
+                }
                 let file_path = dir_path.join(format!("file_{:04}.txt", file_idx));
                 let mut file = fs::File::create(&file_path)?;
                 // Write some content to make it realistic
@@ -51,9 +55,10 @@ impl FileEnumerationBenchmark {
             }
 
             if dir_idx % 50 == 0 {
+                let created = std::cmp::min((dir_idx + 1) * files_per_dir, total_files);
                 progress.update(
                     (dir_idx as f32 / num_dirs as f32) * 0.5,
-                    &format!("Creating files... {}/{}", dir_idx * files_per_dir, total_files),
+                    &format!("Creating files... {}/{}", created, total_files),
                 );
             }
         }
@@ -117,9 +122,9 @@ impl Benchmark for FileEnumerationBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        // Setup
-        self.setup(progress)?;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        // Setup with configured file count
+        self.setup_with_count(progress, config.disk_file_enum_count)?;
 
         progress.update(0.5, "Running enumeration tests...");
 
@@ -127,7 +132,7 @@ impl Benchmark for FileEnumerationBenchmark {
         let _ = self.run_enumeration()?;
 
         // Actual runs
-        let num_runs = 5;
+        let num_runs = config.iterations as usize;
         let mut durations_ms: Vec<f64> = Vec::with_capacity(num_runs);
         let mut files_counted = 0u64;
 

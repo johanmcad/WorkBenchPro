@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -56,15 +56,15 @@ impl Benchmark for MetadataOpsBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Clean up any previous run
         self.cleanup();
         fs::create_dir_all(&self.test_dir)?;
 
         progress.update(0.0, "Running metadata operations...");
 
-        let num_files = 5000;
-        let num_runs = 3;
+        let num_files = config.disk_metadata_count as usize;
+        let num_runs = config.iterations as usize;
         let mut ops_per_sec_samples: Vec<f64> = Vec::with_capacity(num_runs);
 
         for run in 0..num_runs {

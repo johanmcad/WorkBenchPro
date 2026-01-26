@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use rand::Rng;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{Percentiles, TestDetails, TestResult};
 
@@ -89,13 +89,13 @@ impl Benchmark for StorageLatencyBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Setup
         self.setup(progress)?;
 
         let file_size: u64 = 1024 * 1024 * 1024;
         let read_size: usize = 4096; // 4KB
-        let num_reads: usize = 10000;
+        let num_reads: usize = config.lat_storage_read_count as usize;
         let max_offset = file_size - read_size as u64;
 
         progress.update(0.3, "Running latency tests...");

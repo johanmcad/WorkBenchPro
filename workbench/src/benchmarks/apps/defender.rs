@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -52,7 +52,7 @@ impl Benchmark for DefenderImpactBenchmark {
         60
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // This benchmark works on any OS but is most relevant on Windows with Defender
 
         // Clean up any existing test directory
@@ -66,8 +66,8 @@ impl Benchmark for DefenderImpactBenchmark {
         let mut read_times: Vec<f64> = Vec::new();
         let mut delete_times: Vec<f64> = Vec::new();
 
-        let iterations = 5;
-        let files_per_iteration = 100;
+        let iterations = config.iterations as usize;
+        let files_per_iteration = config.app_defender_files as usize;
 
         for iter in 0..iterations {
             if progress.is_cancelled() {

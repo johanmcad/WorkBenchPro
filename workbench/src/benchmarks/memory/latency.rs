@@ -1,7 +1,7 @@
 use anyhow::Result;
 use rand::seq::SliceRandom;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -46,13 +46,12 @@ impl Benchmark for MemoryLatencyBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         // Use a buffer larger than typical L3 cache to measure main memory latency
-        // 64MB buffer with 64-byte cache line sized elements
-        let buffer_size: usize = 64 * 1024 * 1024;
+        let buffer_size: usize = config.mem_latency_buffer_mb as usize * 1024 * 1024;
         let element_size: usize = 64; // Cache line size
         let num_elements = buffer_size / element_size;
-        let num_chases: usize = 10_000_000;
+        let num_chases: usize = config.mem_latency_chase_millions as usize * 1_000_000;
 
         progress.update(0.0, "Allocating memory buffer...");
 
@@ -80,7 +79,7 @@ impl Benchmark for MemoryLatencyBenchmark {
         progress.update(0.2, "Measuring memory latency...");
 
         let mut latencies: Vec<f64> = Vec::new();
-        let num_runs = 5;
+        let num_runs = config.iterations as usize;
 
         for run in 0..num_runs {
             if progress.is_cancelled() {

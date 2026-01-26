@@ -6,7 +6,7 @@ use std::process::Command;
 
 use anyhow::Result;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::{CommandExt, Timer};
 use crate::models::{TestDetails, TestResult};
 
@@ -33,7 +33,7 @@ impl WindowsCompressionBenchmark {
             .unwrap_or(false)
     }
 
-    fn setup_test_files(&self, progress: &dyn ProgressCallback) -> Result<PathBuf> {
+    fn setup_test_files(&self, progress: &dyn ProgressCallback, file_count: u32) -> Result<PathBuf> {
         let source_dir = self.test_dir.join("source");
 
         // Clean up any existing test directory
@@ -43,21 +43,25 @@ impl WindowsCompressionBenchmark {
         progress.update(0.05, "Creating test files for compression...");
 
         // Create a realistic file structure (simulating a project)
-        // 30 directories with ~50 files each = 1500 files
-        let num_dirs = 30;
-        let files_per_dir = 50;
+        let num_dirs = (file_count as f32).sqrt().ceil() as u32;
+        let files_per_dir = (file_count + num_dirs - 1) / num_dirs;
 
+        let mut files_created = 0u32;
         for d in 0..num_dirs {
             let dir_path = source_dir.join(format!("folder_{:03}", d));
             fs::create_dir_all(&dir_path)?;
 
             for f in 0..files_per_dir {
+                if files_created >= file_count {
+                    break;
+                }
+
                 let file_path = dir_path.join(format!("file_{:04}.txt", f));
 
                 // Create varied content - mix of text and pseudo-code
                 let content: String = (0..100)
                     .map(|i| {
-                        let c = ((d * 17 + f * 13 + i) % 62) as u8;
+                        let c = ((d * 17 + f * 13 + i as u32) % 62) as u8;
                         let ch = match c {
                             0..=25 => (b'a' + c) as char,
                             26..=51 => (b'A' + c - 26) as char,
@@ -69,12 +73,13 @@ impl WindowsCompressionBenchmark {
                     .collect();
 
                 fs::write(&file_path, content.repeat(50))?; // ~5KB per file
+                files_created += 1;
             }
 
             if d % 5 == 0 {
                 progress.update(
                     0.05 + (d as f32 / num_dirs as f32) * 0.15,
-                    &format!("Creating folders... {}/{}", d + 1, num_dirs),
+                    &format!("Creating files... {}/{}", files_created, file_count),
                 );
             }
         }
@@ -114,20 +119,20 @@ impl Benchmark for WindowsCompressionBenchmark {
         60
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         if !Self::is_available() {
             return Err(anyhow::anyhow!(
                 "PowerShell Compress-Archive not available (requires Windows PowerShell 5.0+)"
             ));
         }
 
-        let source_dir = self.setup_test_files(progress)?;
+        let source_dir = self.setup_test_files(progress, config.app_compression_files)?;
         let archive_path = self.test_dir.join("test_archive.zip");
         let extract_dir = self.test_dir.join("extracted");
 
         let mut compress_times: Vec<f64> = Vec::new();
         let mut extract_times: Vec<f64> = Vec::new();
-        let iterations = 5;
+        let iterations = config.iterations as usize;
 
         progress.update(0.2, "Running compression benchmark...");
 

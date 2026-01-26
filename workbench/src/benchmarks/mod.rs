@@ -5,4 +5,4 @@ pub mod latency;
 pub mod memory;
 pub mod traits;
 
-pub use traits::{Benchmark, Category, ProgressCallback};
+pub use traits::{Benchmark, BenchmarkConfig, Category, ProgressCallback};

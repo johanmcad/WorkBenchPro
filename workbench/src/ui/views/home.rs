@@ -1,8 +1,15 @@
 use egui::{CollapsingHeader, RichText, Ui};
 
-use crate::core::RunConfig;
 use crate::models::SystemInfo;
 use crate::ui::Theme;
+
+/// Actions returned from the home view
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HomeAction {
+    None,
+    Run,
+    History,
+}
 
 /// Test specification for display
 struct TestSpec {
@@ -264,14 +271,13 @@ impl TestSpecs {
 pub struct HomeView;
 
 impl HomeView {
-    /// Returns (run_clicked, history_clicked)
-    pub fn show_with_history(
+    /// Show the home view
+    /// Returns HomeAction indicating what action was requested
+    pub fn show(
         ui: &mut Ui,
         system_info: &SystemInfo,
-        run_config: &mut RunConfig,
-    ) -> (bool, bool) {
-        let mut run_clicked = false;
-        let mut history_clicked = false;
+    ) -> HomeAction {
+        let mut action = HomeAction::None;
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             // Compact header - left aligned
@@ -283,7 +289,7 @@ impl HomeView {
                         .color(Theme::ACCENT),
                 );
                 ui.label(
-                    RichText::new("— Developer Workstation Benchmark")
+                    RichText::new("- Developer Workstation Benchmark")
                         .size(Theme::SIZE_BODY)
                         .color(Theme::TEXT_SECONDARY),
                 );
@@ -410,17 +416,6 @@ impl HomeView {
 
             ui.add_space(6.0);
 
-            // Options
-            ui.horizontal(|ui| {
-                ui.checkbox(
-                    &mut run_config.skip_synthetic,
-                    RichText::new("Skip synthetic benchmarks (run only real applications)")
-                        .size(Theme::SIZE_CAPTION),
-                );
-            });
-
-            ui.add_space(6.0);
-
             // Buttons - compact
             ui.horizontal(|ui| {
                 let run_button = egui::Button::new(
@@ -434,7 +429,7 @@ impl HomeView {
                 .rounding(4.0);
 
                 if ui.add(run_button).clicked() {
-                    run_clicked = true;
+                    action = HomeAction::Run;
                 }
 
                 ui.add_space(4.0);
@@ -446,14 +441,14 @@ impl HomeView {
                 .rounding(4.0);
 
                 if ui.add(history_button).clicked() {
-                    history_clicked = true;
+                    action = HomeAction::History;
                 }
             });
 
             ui.add_space(4.0);
         });
 
-        (run_clicked, history_clicked)
+        action
     }
 
     fn show_test_list(ui: &mut Ui, id: &str, tests: &[TestSpec]) {

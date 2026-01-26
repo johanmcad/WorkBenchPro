@@ -2,7 +2,7 @@ use anyhow::Result;
 use lz4_flex::{compress_prepend_size, decompress_size_prepended};
 use rand::Rng;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -47,9 +47,9 @@ impl Benchmark for SingleThreadBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
         let chunk_size: usize = 64 * 1024; // 64KB chunks
-        let total_data: usize = 256 * 1024 * 1024; // 256MB total
+        let total_data: usize = config.cpu_single_thread_mb as usize * 1024 * 1024;
         let iterations = total_data / chunk_size;
 
         progress.update(0.0, "Generating test data...");
@@ -77,7 +77,7 @@ impl Benchmark for SingleThreadBenchmark {
         progress.update(0.2, "Running benchmark...");
 
         let mut throughputs: Vec<f64> = Vec::new();
-        let num_runs = 5;
+        let num_runs = config.iterations as usize;
 
         for run in 0..num_runs {
             if progress.is_cancelled() {

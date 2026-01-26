@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use anyhow::Result;
 use rand::Rng;
 
-use crate::benchmarks::{Benchmark, Category, ProgressCallback};
+use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
 use crate::models::{TestDetails, TestResult};
 
@@ -21,11 +21,10 @@ impl LargeFileReadBenchmark {
         }
     }
 
-    fn setup(&self, progress: &dyn ProgressCallback) -> Result<()> {
-        progress.update(0.0, "Creating test file (2GB)...");
+    fn setup_with_size(&self, progress: &dyn ProgressCallback, size_mb: u32) -> Result<()> {
+        progress.update(0.0, &format!("Creating test file ({}MB)...", size_mb));
 
-        // Create 2GB file
-        let file_size: u64 = 2 * 1024 * 1024 * 1024; // 2GB
+        let file_size: u64 = size_mb as u64 * 1024 * 1024;
         let chunk_size: usize = 4 * 1024 * 1024; // 4MB chunks
         let num_chunks = (file_size / chunk_size as u64) as usize;
 
@@ -57,8 +56,8 @@ impl LargeFileReadBenchmark {
         let _ = fs::remove_file(&self.test_file);
     }
 
-    fn run_read(&self) -> Result<f64> {
-        let file_size: u64 = 2 * 1024 * 1024 * 1024;
+    fn run_read_with_size(&self, size_mb: u32) -> Result<f64> {
+        let file_size: u64 = size_mb as u64 * 1024 * 1024;
         let chunk_size: usize = 1024 * 1024; // 1MB chunks
 
         let mut file = File::open(&self.test_file)?;
@@ -111,17 +110,19 @@ impl Benchmark for LargeFileReadBenchmark {
         true
     }
 
-    fn run(&self, progress: &dyn ProgressCallback) -> Result<TestResult> {
-        // Setup
-        self.setup(progress)?;
+    fn run(&self, progress: &dyn ProgressCallback, config: &BenchmarkConfig) -> Result<TestResult> {
+        let file_size_mb = config.disk_large_file_mb;
+
+        // Setup with configured file size
+        self.setup_with_size(progress, file_size_mb)?;
 
         progress.update(0.4, "Running sequential read tests...");
 
         // Warmup run
-        let _ = self.run_read()?;
+        let _ = self.run_read_with_size(file_size_mb)?;
 
         // Actual runs
-        let num_runs = 3;
+        let num_runs = config.iterations as usize;
         let mut speeds_mb_per_sec: Vec<f64> = Vec::with_capacity(num_runs);
 
         for run_idx in 0..num_runs {
@@ -130,7 +131,7 @@ impl Benchmark for LargeFileReadBenchmark {
                 return Err(anyhow::anyhow!("Cancelled"));
             }
 
-            let mb_per_sec = self.run_read()?;
+            let mb_per_sec = self.run_read_with_size(file_size_mb)?;
             speeds_mb_per_sec.push(mb_per_sec);
 
             progress.update(
@@ -164,12 +165,12 @@ impl Benchmark for LargeFileReadBenchmark {
         Ok(TestResult {
             test_id: self.id().to_string(),
             name: self.name().to_string(),
-            description: self.description().to_string(),
+            description: format!("Read {}MB file in 1MB chunks", file_size_mb),
             value: median,
             unit: "MB/s".to_string(),
             details: TestDetails {
                 iterations: num_runs as u32,
-                duration_secs: (2048.0 * num_runs as f64) / mean,
+                duration_secs: (file_size_mb as f64 * num_runs as f64) / mean,
                 min,
                 max,
                 mean,

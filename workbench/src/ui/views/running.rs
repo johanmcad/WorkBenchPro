@@ -15,6 +15,7 @@ impl RunningView {
     pub fn show(
         ui: &mut Ui,
         overall_progress: f32,
+        current_test_progress: f32,
         current_test: &str,
         current_message: &str,
         completed_tests: &[String],
@@ -77,11 +78,21 @@ impl RunningView {
                     .show(ui, |ui| {
                         ui.set_min_width(420.0);
 
-                        ui.label(
-                            RichText::new("Current Test")
-                                .size(Theme::SIZE_BODY)
-                                .color(Theme::TEXT_SECONDARY),
-                        );
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new("Current Test")
+                                    .size(Theme::SIZE_BODY)
+                                    .color(Theme::TEXT_SECONDARY),
+                            );
+                            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+                                ui.label(
+                                    RichText::new(format!("{:.0}%", current_test_progress * 100.0))
+                                        .size(Theme::SIZE_CARD)
+                                        .strong()
+                                        .color(Theme::TEXT_SECONDARY),
+                                );
+                            });
+                        });
 
                         ui.add_space(4.0);
 
@@ -104,6 +115,11 @@ impl RunningView {
                                 .color(Theme::TEXT_SECONDARY)
                                 .italics(),
                         );
+
+                        ui.add_space(6.0);
+
+                        // Current test progress bar
+                        ui.add(ProgressBar::new(current_test_progress).height(8.0).width(420.0).color(Theme::TEXT_SECONDARY));
                     });
 
                 ui.add_space(8.0);
