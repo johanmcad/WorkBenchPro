@@ -54,7 +54,7 @@ export default function CompactComparisonChart({
 // Infer if higher is better based on unit
 function inferHigherIsBetter(unit) {
   if (!unit) return true
-  const lowerUnit = unit.toLowerCase()
+  const lowerUnit = unit.toLowerCase().trim()
 
   // FIRST: Check for rate/throughput units (contain "/" indicating "per")
   // Examples: files/sec, MB/s, operations/second, GB/s
@@ -66,6 +66,11 @@ function inferHigherIsBetter(unit) {
   // Throughput keywords without slash
   if (lowerUnit.includes('throughput') || lowerUnit.includes('bandwidth')) {
     return true
+  }
+
+  // Exact matches for short time units (e.g., "s", "ms", "ns")
+  if (['s', 'ms', 'ns', 'μs', 'us'].includes(lowerUnit)) {
+    return false
   }
 
   // Time/latency/duration units - lower is better
