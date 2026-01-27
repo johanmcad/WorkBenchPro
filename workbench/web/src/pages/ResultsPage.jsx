@@ -41,8 +41,96 @@ export default function ResultsPage() {
   // UI state
   const [panelCollapsed, setPanelCollapsed] = useState(false)
   const [filterText, setFilterText] = useState('')
-  const [sortByScore, setSortByScore] = useState(true)
+  const [sortMode, setSortMode] = useState('score') // 'score', 'name', 'date'
+  const [groupByDevice, setGroupByDevice] = useState(false)
   const [runScores, setRunScores] = useState({}) // { runId: { betterThanMedian, totalTests } }
+
+  // Detect device type based on Intel/AMD CPU naming conventions
+  // Sources: Intel & AMD official naming schemes
+  const getDeviceType = (cpuName) => {
+    if (!cpuName) return 'unknown'
+    const cpu = cpuName.toUpperCase()
+
+    // Server/VDI patterns (check first - most specific)
+    // Only true server CPUs: AMD EPYC, Intel Xeon Scalable (Gold/Platinum/Silver/Bronze)
+    // Virtual machine indicators
+    const serverPatterns = [
+      /EPYC/i,                   // AMD EPYC - always server
+      /PLATINUM/i,               // Intel Xeon Platinum - datacenter
+      /\bGOLD\b.*\d{4}/i,        // Intel Xeon Gold 6xxx - datacenter
+      /\bSILVER\b.*\d{4}/i,      // Intel Xeon Silver - datacenter
+      /\bBRONZE\b.*\d{4}/i,      // Intel Xeon Bronze - datacenter
+      /VIRTUAL/i,                // Virtual CPU indicator
+      /QEMU/i,                   // QEMU virtual CPU
+      /KVM/i,                    // KVM virtual CPU
+      /HYPERVISOR/i,             // Hypervisor indicator
+      /\bE7-/i,                  // Intel Xeon E7 - typically multi-socket server
+    ]
+
+    // Desktop workstation patterns (Xeons used in desktops)
+    // Intel Xeon E5 (v1-v4), Xeon W, Xeon E are commonly desktop workstation
+    const workstationPatterns = [
+      /XEON.*E5-/i,              // Intel Xeon E5 - desktop workstation (like E5-1630)
+      /XEON.*E3-/i,              // Intel Xeon E3 - desktop workstation
+      /XEON.*W-/i,               // Intel Xeon W - workstation
+      /XEON.*E-\d{4}/i,          // Intel Xeon E (E-2288G) - workstation
+      /THREADRIPPER/i,           // AMD Threadripper (including PRO) - HEDT/workstation
+    ]
+
+    // Laptop/Mobile suffixes:
+    // Intel: U (ultra-low power), H/HK (high-perf mobile), P (balanced mobile)
+    // AMD: U (ultrathin), H/HS/HX (high-perf mobile), C (chromebook), E (fanless)
+    const laptopPatterns = [
+      /\d{4,5}[UH]\b/,           // Intel/AMD: ends in U or H (i7-1260U, Ryzen 7 6800H)
+      /\d{4,5}H[KSX]\b/,         // Intel HK, AMD HS/HX (i9-12900HK, Ryzen 9 6900HX)
+      /\d{4,5}P\b/,              // Intel P-series (i7-1280P)
+      /\d{3,4}[UH]\b/,           // Older 4-digit models (i7-8550U)
+      /MOBILE/i,                  // Explicit mobile keyword
+      /\bM[123]\b/,              // Apple M1, M2, M3
+      /\bM[123] (PRO|MAX|ULTRA)/i, // Apple M1/M2/M3 Pro/Max/Ultra
+    ]
+
+    // Desktop suffixes:
+    // Intel: K/KF (unlocked), F (no iGPU), T (low power), X/XE (extreme)
+    // AMD: X/XT (high perf), X3D (3D V-Cache), G/GE (APU), F (no iGPU)
+    const desktopPatterns = [
+      /\d{4,5}K\b/,              // Intel K (i9-13900K)
+      /\d{4,5}KF\b/,             // Intel KF (i9-13900KF)
+      /\d{4,5}F\b/,              // Intel/AMD F - no iGPU (i5-13400F)
+      /\d{4,5}T\b/,              // Intel T - low power desktop
+      /\d{4,5}X\b/,              // AMD X (Ryzen 9 5900X)
+      /\d{4,5}XT\b/,             // AMD XT (Ryzen 7 3800XT)
+      /\d{4,5}X3D\b/,            // AMD X3D (Ryzen 9 7950X3D)
+      /\d{4,5}G\b/,              // AMD G - APU (Ryzen 5 5600G)
+      /\d{4,5}GE\b/,             // AMD GE - efficient APU
+      /\d{3,4}K\b/,              // Older Intel K (i7-8700K)
+      /THREADRIPPER\b/i,         // AMD Threadripper (HEDT, not PRO)
+    ]
+
+    // Check server patterns first (most specific)
+    for (const pattern of serverPatterns) {
+      if (pattern.test(cpu)) return 'server'
+    }
+
+    // Check workstation patterns (desktop workstation Xeons, Threadripper)
+    for (const pattern of workstationPatterns) {
+      if (pattern.test(cpu)) return 'desktop'
+    }
+
+    // Check laptop patterns
+    for (const pattern of laptopPatterns) {
+      if (pattern.test(cpu)) return 'laptop'
+    }
+
+    // Check desktop patterns
+    for (const pattern of desktopPatterns) {
+      if (pattern.test(cpu)) return 'desktop'
+    }
+
+    // Default heuristics for unmarked CPUs
+    // CPUs without suffix are usually desktop (e.g., i5-13400, Ryzen 5 5600)
+    return 'desktop'
+  }
 
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -53,29 +141,30 @@ export default function ResultsPage() {
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false)
   const [editDisplayName, setEditDisplayName] = useState('')
+  const [editUserName, setEditUserName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPassword, setEditPassword] = useState('')
   const [editError, setEditError] = useState(null)
   const [editing, setEditing] = useState(false)
 
-  // Load results list
+  // Load results list and statistics on mount
   useEffect(() => {
-    const loadResults = async () => {
+    const loadInitialData = async () => {
       setLoadingList(true)
       try {
-        const data = await fetchBenchmarkRuns({})
+        const [data, statsData] = await Promise.all([
+          fetchBenchmarkRuns({}),
+          fetchTestStatistics(),
+        ])
         setResults(data)
-        // Auto-select first result if none selected
-        if (selectedIds.length === 0 && data.length > 0) {
-          setSelectedIds([data[0].id])
-        }
+        setStatistics(statsData)
       } catch (err) {
         setError(err.message)
       } finally {
         setLoadingList(false)
       }
     }
-    loadResults()
+    loadInitialData()
   }, [])
 
   // Load selected result details for all selected IDs
@@ -85,10 +174,6 @@ export default function ResultsPage() {
     const loadDetails = async () => {
       setLoadingDetail(true)
       try {
-        // Load statistics once (shared across all selections)
-        const statsData = await fetchTestStatistics()
-        setStatistics(statsData)
-
         // Load details for each selected ID
         const newRuns = {}
         const newRanks = {}
@@ -213,12 +298,13 @@ export default function ResultsPage() {
     try {
       await updateBenchmarkRun(primarySelectedId, editPassword, {
         display_name: editDisplayName,
+        user_name: editUserName,
         description: editDescription,
       })
       // Update local state
       setResults(results.map(r =>
         r.id === primarySelectedId
-          ? { ...r, display_name: editDisplayName, description: editDescription }
+          ? { ...r, display_name: editDisplayName, user_name: editUserName, description: editDescription }
           : r
       ))
       setSelectedRuns(prev => prev[primarySelectedId] ? {
@@ -226,6 +312,7 @@ export default function ResultsPage() {
         [primarySelectedId]: {
           ...prev[primarySelectedId],
           display_name: editDisplayName,
+          user_name: editUserName,
           description: editDescription,
         }
       } : prev)
@@ -252,6 +339,18 @@ export default function ResultsPage() {
     responsiveness: { name: 'Responsiveness', color: '#10b981', tests: [] },
   }
 
+  // Category mapping based on test_id patterns
+  const getCategoryForTest = (testId) => {
+    const projectOps = ['file_enum', 'random_read', 'metadata_ops', 'dir_traversal', 'large_file', 'registry_ops', 'windows_services', 'network_tools']
+    const buildPerf = ['single_thread', 'multi_thread', 'mixed_workload', 'cargo_build', 'csharp_compile', 'archive_ops', 'powershell', 'memory_bandwidth', 'memory_latency']
+    const responsive = ['process_spawn', 'thread_wake', 'storage_latency']
+
+    if (projectOps.some(p => testId.includes(p))) return 'project_operations'
+    if (buildPerf.some(p => testId.includes(p))) return 'build_performance'
+    if (responsive.some(p => testId.includes(p))) return 'responsiveness'
+    return 'project_operations' // default
+  }
+
   // Build selections array with data for passing to chart
   const selections = selectedIds.map((id, index) => ({
     id,
@@ -261,46 +360,35 @@ export default function ResultsPage() {
     percentileRanks: allPercentileRanks[id] || [],
   })).filter(s => s.run) // Only include loaded runs
 
-  if (selections.length > 0) {
-    // Use first selection to determine categories
-    const firstRun = selections[0].run
+  // Build categories from statistics (works with or without selections)
+  statistics.forEach((stat) => {
+    const category = getCategoryForTest(stat.test_id)
 
-    statistics.forEach((stat) => {
-      let category = null
-      if (firstRun.results.project_operations?.some(t => t.test_id === stat.test_id)) {
-        category = 'project_operations'
-      } else if (firstRun.results.build_performance?.some(t => t.test_id === stat.test_id)) {
-        category = 'build_performance'
-      } else if (firstRun.results.responsiveness?.some(t => t.test_id === stat.test_id)) {
-        category = 'responsiveness'
-      }
+    if (category && categories[category]) {
+      // Build selections data for this specific test
+      const testSelections = selections.map(sel => {
+        const allTests = [
+          ...(sel.run.results.project_operations || []),
+          ...(sel.run.results.build_performance || []),
+          ...(sel.run.results.responsiveness || []),
+        ]
+        const userTest = allTests.find(t => t.test_id === stat.test_id)
+        const percentile = sel.percentileRanks.find(p => p.test_id === stat.test_id)
+        return {
+          id: sel.id,
+          displayName: sel.displayName,
+          color: sel.color,
+          userTest,
+          percentile,
+        }
+      })
 
-      if (category && categories[category]) {
-        // Build selections data for this specific test
-        const testSelections = selections.map(sel => {
-          const allTests = [
-            ...(sel.run.results.project_operations || []),
-            ...(sel.run.results.build_performance || []),
-            ...(sel.run.results.responsiveness || []),
-          ]
-          const userTest = allTests.find(t => t.test_id === stat.test_id)
-          const percentile = sel.percentileRanks.find(p => p.test_id === stat.test_id)
-          return {
-            id: sel.id,
-            displayName: sel.displayName,
-            color: sel.color,
-            userTest,
-            percentile,
-          }
-        })
-
-        categories[category].tests.push({
-          ...stat,
-          selections: testSelections,
-        })
-      }
-    })
-  }
+      categories[category].tests.push({
+        ...stat,
+        selections: testSelections,
+      })
+    }
+  })
 
   return (
     <div className="h-[calc(100vh-120px)] flex">
@@ -338,15 +426,26 @@ export default function ResultsPage() {
                   className="w-full pl-7 pr-2 py-1 text-xs bg-wb-bg-secondary border border-wb-border rounded focus:outline-none focus:border-wb-accent"
                 />
               </div>
-              <button
-                onClick={() => setSortByScore(!sortByScore)}
-                className={`flex items-center gap-1 text-[10px] px-2 py-1 rounded transition-colors ${
-                  sortByScore ? 'bg-wb-accent/20 text-wb-accent' : 'text-wb-text-secondary hover:text-white'
-                }`}
-              >
-                <ArrowUpDown size={12} />
-                Sort by score
-              </button>
+              <div className="flex items-center gap-2">
+                <select
+                  value={sortMode}
+                  onChange={(e) => setSortMode(e.target.value)}
+                  className="text-[10px] px-2 py-1 bg-wb-bg-secondary border border-wb-border rounded focus:outline-none focus:border-wb-accent text-wb-text-primary"
+                >
+                  <option value="score">Sort: Score</option>
+                  <option value="name">Sort: Name</option>
+                  <option value="date">Sort: Date</option>
+                </select>
+                <button
+                  onClick={() => setGroupByDevice(!groupByDevice)}
+                  className={`text-[10px] px-2 py-1 rounded transition-colors whitespace-nowrap ${
+                    groupByDevice ? 'bg-wb-accent/20 text-wb-accent' : 'text-wb-text-secondary hover:text-white border border-wb-border'
+                  }`}
+                  title="Group by device type (Desktop/Laptop/Server)"
+                >
+                  Group by type
+                </button>
+              </div>
             </div>
             {loadingList ? (
               <div className="flex items-center justify-center py-12">
@@ -358,19 +457,116 @@ export default function ResultsPage() {
               </div>
             ) : (
               <div className="divide-y divide-wb-border/50 flex-1 overflow-y-auto">
-                {results
-                  .filter(r =>
+                {(() => {
+                  // Filter and sort results
+                  const filtered = results.filter(r =>
                     !filterText ||
                     r.display_name?.toLowerCase().includes(filterText.toLowerCase()) ||
                     r.cpu_name?.toLowerCase().includes(filterText.toLowerCase())
-                  )
-                  .sort((a, b) => {
-                    if (!sortByScore) return 0
-                    const scoreA = runScores[a.id]?.betterThanMedian ?? -1
-                    const scoreB = runScores[b.id]?.betterThanMedian ?? -1
-                    return scoreB - scoreA // Higher score first
+                  ).sort((a, b) => {
+                    if (sortMode === 'score') {
+                      const scoreA = runScores[a.id]?.betterThanMedian ?? -1
+                      const scoreB = runScores[b.id]?.betterThanMedian ?? -1
+                      return scoreB - scoreA
+                    } else if (sortMode === 'name') {
+                      return (a.display_name || '').localeCompare(b.display_name || '')
+                    } else if (sortMode === 'date') {
+                      return new Date(b.uploaded_at) - new Date(a.uploaded_at)
+                    }
+                    return 0
                   })
-                  .map((result) => {
+
+                  // Group by device type if enabled
+                  if (groupByDevice) {
+                    const groups = { desktop: [], laptop: [], server: [] }
+                    filtered.forEach(r => {
+                      const type = getDeviceType(r.cpu_name)
+                      if (type === 'server') groups.server.push(r)
+                      else if (type === 'laptop') groups.laptop.push(r)
+                      else groups.desktop.push(r)
+                    })
+
+                    const renderResult = (result) => {
+                      const selectionColor = getSelectionColor(result.id)
+                      const isSelected = selectedIds.includes(result.id)
+                      return (
+                        <button
+                          key={result.id}
+                          onClick={() => toggleSelection(result.id)}
+                          className={`w-full text-left p-2 hover:bg-wb-bg-secondary/50 transition-colors ${
+                            isSelected ? 'bg-wb-bg-secondary' : ''
+                          }`}
+                          style={isSelected ? { borderLeft: `3px solid ${selectionColor?.hex}` } : {}}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              {isSelected && (
+                                <div
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: selectionColor?.hex }}
+                                />
+                              )}
+                              <span className="font-medium text-xs truncate">
+                                {result.display_name}
+                              </span>
+                            </div>
+                            {runScores[result.id] ? (
+                              <span className="text-[10px] text-green-400 shrink-0 font-medium">
+                                {runScores[result.id].betterThanMedian}/{runScores[result.id].totalTests}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-wb-text-secondary shrink-0">
+                                {formatDate(result.uploaded_at)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
+                            {result.description && (
+                              <>
+                                <span className="text-wb-accent">{result.description}</span>
+                                <span>•</span>
+                              </>
+                            )}
+                            <span className="truncate">{result.cpu_name}</span>
+                            <span>•</span>
+                            <span>{Math.round(result.memory_gb)}GB</span>
+                          </div>
+                        </button>
+                      )
+                    }
+
+                    return (
+                      <>
+                        {groups.desktop.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 bg-wb-bg-secondary/50 text-[10px] font-medium text-wb-text-secondary uppercase tracking-wide">
+                              Desktop ({groups.desktop.length})
+                            </div>
+                            {groups.desktop.map(renderResult)}
+                          </>
+                        )}
+                        {groups.laptop.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 bg-wb-bg-secondary/50 text-[10px] font-medium text-wb-text-secondary uppercase tracking-wide">
+                              Laptop ({groups.laptop.length})
+                            </div>
+                            {groups.laptop.map(renderResult)}
+                          </>
+                        )}
+                        {groups.server.length > 0 && (
+                          <>
+                            <div className="px-3 py-1.5 bg-wb-bg-secondary/50 text-[10px] font-medium text-wb-text-secondary uppercase tracking-wide">
+                              Server / VDI ({groups.server.length})
+                            </div>
+                            {groups.server.map(renderResult)}
+                          </>
+                        )}
+                      </>
+                    )
+                  }
+
+                  // No grouping - render flat list
+                  return filtered.map((result) => {
                     const selectionColor = getSelectionColor(result.id)
                     const isSelected = selectedIds.includes(result.id)
                     return (
@@ -417,7 +613,8 @@ export default function ResultsPage() {
                         </div>
                       </button>
                     )
-                  })}
+                  })
+                })()}
               </div>
             )}
           </div>
@@ -426,21 +623,28 @@ export default function ResultsPage() {
 
       {/* Right Panel - Comparison View */}
       <div className="flex-1 overflow-y-auto">
-        {selectedIds.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-wb-text-secondary">
-            Select a result to view comparison
+        {loadingList ? (
+          <div className="flex items-center justify-center h-full">
+            <Loader2 size={32} className="animate-spin text-wb-accent" />
           </div>
         ) : loadingDetail ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 size={32} className="animate-spin text-wb-accent" />
           </div>
-        ) : selections.length === 0 ? (
+        ) : statistics.length === 0 ? (
           <div className="flex items-center justify-center h-full text-wb-text-secondary">
-            Failed to load results
+            No statistics available
           </div>
         ) : (
           <div className="p-6">
-            {/* Header - show all selected computers */}
+            {/* Header - show all selected computers or community stats message */}
+            {selections.length === 0 ? (
+              <div className="mb-6 p-4 rounded-lg bg-wb-bg-card border border-wb-border">
+                <p className="text-wb-text-secondary text-sm">
+                  Showing community statistics. Select a result from the left panel to compare your benchmark.
+                </p>
+              </div>
+            ) : (
             <div className="mb-6 space-y-3">
               {selections.map((sel, index) => (
                 <div
@@ -455,6 +659,9 @@ export default function ResultsPage() {
                         style={{ backgroundColor: sel.color.hex }}
                       />
                       <h2 className="text-lg font-bold">{sel.displayName}</h2>
+                      {sel.run.user_name && (
+                        <span className="text-wb-text-secondary text-sm">by {sel.run.user_name}</span>
+                      )}
                       {sel.run.description && (
                         <span className="text-wb-text-secondary text-sm">({sel.run.description})</span>
                       )}
@@ -494,6 +701,7 @@ export default function ResultsPage() {
                         onClick={() => {
                           setShowEditModal(true)
                           setEditDisplayName(sel.run.display_name || '')
+                          setEditUserName(sel.run.user_name || '')
                           setEditDescription(sel.run.description || '')
                           setEditPassword('')
                           setEditError(null)
@@ -519,6 +727,7 @@ export default function ResultsPage() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Comparison Charts */}
             <div className="space-y-6">
@@ -622,6 +831,18 @@ export default function ResultsPage() {
                   placeholder="Enter display name"
                   className="input w-full"
                   autoFocus
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm text-wb-text-secondary mb-2">
+                  User Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={editUserName}
+                  onChange={(e) => setEditUserName(e.target.value)}
+                  placeholder="Your name or alias"
+                  className="input w-full"
                 />
               </div>
               <div className="mb-4">

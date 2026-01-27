@@ -79,6 +79,7 @@ pub struct WorkBenchProApp {
     // Upload dialog state
     show_upload_dialog: bool,
     upload_display_name: String,
+    upload_user_name: String,
     upload_description: String, // Optional description (VDI, Desktop, Laptop, etc.)
     upload_in_progress: bool,
     upload_error: Option<String>,
@@ -123,6 +124,7 @@ impl WorkBenchProApp {
             // Upload dialog
             show_upload_dialog: false,
             upload_display_name: machine_name,
+            upload_user_name: String::new(),
             upload_description: String::new(),
             upload_in_progress: false,
             upload_error: None,
@@ -317,12 +319,17 @@ impl WorkBenchProApp {
         self.upload_in_progress = true;
         self.upload_error = None;
 
+        let user_name = if self.upload_user_name.trim().is_empty() {
+            None
+        } else {
+            Some(self.upload_user_name.trim().to_string())
+        };
         let description = if self.upload_description.trim().is_empty() {
             None
         } else {
             Some(self.upload_description.trim().to_string())
         };
-        match self.cloud_client.upload(run, &self.upload_display_name, description) {
+        match self.cloud_client.upload(run, &self.upload_display_name, user_name, description) {
             Ok(remote_id) => {
                 self.upload_in_progress = false;
                 self.upload_success = true;
@@ -358,6 +365,7 @@ impl WorkBenchProApp {
         self.upload_success = false;
         self.upload_run_index = None;
         self.upload_display_name = self.system_info.hostname.clone();
+        self.upload_user_name = String::new();
         self.upload_description = String::new();
     }
 }
@@ -461,7 +469,19 @@ impl eframe::App for WorkBenchProApp {
                             ui.add(
                                 egui::TextEdit::singleline(&mut self.upload_display_name)
                                     .desired_width(280.0)
-                                    .hint_text("Enter a name for your submission"),
+                                    .hint_text("Name for your submission (or leave empty)"),
+                            );
+
+                            ui.add_space(8.0);
+                            ui.label(
+                                egui::RichText::new("User name (optional):")
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::TEXT_SECONDARY),
+                            );
+                            ui.add(
+                                egui::TextEdit::singleline(&mut self.upload_user_name)
+                                    .desired_width(280.0)
+                                    .hint_text("Your name or alias"),
                             );
 
                             ui.add_space(8.0);
@@ -476,12 +496,22 @@ impl eframe::App for WorkBenchProApp {
                                     .hint_text("e.g. VDI, Desktop, Laptop, Gaming PC"),
                             );
 
+                            ui.add_space(12.0);
+                            ui.separator();
+                            ui.add_space(8.0);
+
+                            // Privacy notice
+                            ui.label(
+                                egui::RichText::new("Privacy notice")
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::TEXT_PRIMARY)
+                                    .strong(),
+                            );
                             ui.add_space(4.0);
                             ui.label(
-                                egui::RichText::new("This info will be visible to everyone")
+                                egui::RichText::new("Only benchmark measurements and basic hardware info \n(CPU, RAM, storage type) are uploaded. No files, personal \ndata, or identifying information is collected. All fields \nabove are optional — your upload can be fully anonymous.")
                                     .size(Theme::SIZE_CAPTION)
-                                    .color(Theme::TEXT_SECONDARY)
-                                    .italics(),
+                                    .color(Theme::TEXT_SECONDARY),
                             );
 
                             if let Some(ref err) = self.upload_error {
@@ -508,7 +538,11 @@ impl eframe::App for WorkBenchProApp {
                                 )
                                 .fill(Theme::ACCENT);
 
-                                if ui.add(upload_btn).clicked() && !self.upload_display_name.trim().is_empty() {
+                                if ui.add(upload_btn).clicked() {
+                                    // Use "Anonymous" if no display name provided
+                                    if self.upload_display_name.trim().is_empty() {
+                                        self.upload_display_name = "Anonymous".to_string();
+                                    }
                                     upload_should_upload = true;
                                 }
                             });

@@ -9,7 +9,7 @@ const headers = {
 }
 
 export async function fetchBenchmarkRuns({ cpuFilter, osFilter, minMemory, limit = 50 } = {}) {
-  let url = `${SUPABASE_URL}/rest/v1/benchmark_runs?select=id,display_name,description,cpu_name,cpu_cores,cpu_threads,memory_gb,os_name,storage_type,uploaded_at&order=uploaded_at.desc&limit=${limit}`
+  let url = `${SUPABASE_URL}/rest/v1/benchmark_runs?select=id,display_name,user_name,description,cpu_name,cpu_cores,cpu_threads,memory_gb,os_name,storage_type,uploaded_at&order=uploaded_at.desc&limit=${limit}`
 
   if (cpuFilter) {
     url += `&cpu_name=ilike.*${encodeURIComponent(cpuFilter)}*`
@@ -88,7 +88,7 @@ export async function deleteBenchmarkRun(id, password) {
   }
 }
 
-export async function updateBenchmarkRun(id, password, { display_name, description }) {
+export async function updateBenchmarkRun(id, password, { display_name, user_name, description }) {
   // Verify password
   const passwordHash = await hashPassword(password)
   if (passwordHash !== ADMIN_PASSWORD_HASH) {
@@ -99,7 +99,7 @@ export async function updateBenchmarkRun(id, password, { display_name, descripti
   const response = await fetch(url, {
     method: 'PATCH',
     headers,
-    body: JSON.stringify({ display_name, description: description || null }),
+    body: JSON.stringify({ display_name, user_name: user_name || null, description: description || null }),
   })
 
   if (!response.ok) {

@@ -25,7 +25,7 @@ export default function HomePage() {
     {
       icon: Cpu,
       title: 'CPU Benchmarks',
-      description: 'Single-thread, multi-thread, and mixed workload tests that mirror real development tasks.',
+      description: 'Single-thread, multi-thread, and mixed workload tests that reflect real-world professional tasks.',
     },
     {
       icon: HardDrive,
@@ -35,12 +35,12 @@ export default function HomePage() {
     {
       icon: Zap,
       title: 'Latency Tests',
-      description: 'Process spawn, thread wake, and storage latency measurements for responsiveness.',
+      description: 'Process spawn, thread wake, and storage latency measurements for system responsiveness.',
     },
     {
       icon: Monitor,
-      title: 'Real-World Apps',
-      description: 'Cargo build, C# compile, archive operations, and PowerShell script execution.',
+      title: 'Real-World Applications',
+      description: 'Build tools, archive operations, PowerShell scripts, and other professional workloads.',
     },
     {
       icon: GitCompare,
@@ -50,7 +50,7 @@ export default function HomePage() {
     {
       icon: Globe,
       title: 'Community Database',
-      description: 'Share your results and see how your machine stacks up against others.',
+      description: 'Share your results and see how your machine compares to others.',
     },
   ]
 
@@ -86,13 +86,13 @@ export default function HomePage() {
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-4xl md:text-6xl font-bold mb-6">
               Benchmark Your
-              <span className="text-wb-accent-light"> Developer Workstation</span>
+              <span className="text-wb-accent-light"> Workstation</span>
             </h1>
             <p className="text-xl text-wb-text-secondary mb-4 max-w-2xl mx-auto">
-              <strong className="text-wb-text-primary">Measure what matters for developers.</strong> Benchmark your workstation's real-world performance—CPU, disk, memory, and the apps you actually use like compilers and PowerShell.
+              <strong className="text-wb-text-primary">Measure what matters in real-world use.</strong> Benchmark your workstation's actual performance—CPU, disk, memory, and everyday applications like compilers, scripts, and file operations.
             </p>
             <p className="text-lg text-wb-text-secondary mb-8 max-w-2xl mx-auto">
-              <strong className="text-wb-text-primary">Know your machine. Optimize your workflow.</strong> Get actionable insights to identify bottlenecks and compare systems, so you spend less time waiting and more time coding.
+              Not a GPU or gaming benchmark. Focused on <strong className="text-wb-text-primary">system responsiveness</strong> and <strong className="text-wb-text-primary">everyday usage</strong>—the things that affect how fast your machine feels.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#download" className="btn-primary flex items-center justify-center gap-2 text-lg">
@@ -137,11 +137,11 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Built for Developers
+              Real-World Performance Testing
             </h2>
             <p className="text-wb-text-secondary text-lg max-w-2xl mx-auto">
-              Unlike generic benchmarks, WorkBench-Pro focuses on the operations that matter
-              for your daily development workflow.
+              Unlike synthetic benchmarks, WorkBench-Pro measures the operations that matter
+              for your daily professional workflow.
             </p>
           </div>
 

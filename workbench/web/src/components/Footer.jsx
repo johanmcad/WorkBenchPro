@@ -10,7 +10,7 @@ export default function Footer() {
               <span className="text-white font-bold">W</span>
             </div>
             <span className="text-wb-text-secondary">
-              WorkBench-Pro - Developer Workstation Benchmark
+              WorkBench-Pro - Real-World Workstation Benchmark
             </span>
           </div>
 
