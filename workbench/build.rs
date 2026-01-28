@@ -7,8 +7,8 @@ fn main() {
         res.set_icon("assets/icon.ico");
 
         // Version info
-        res.set("FileVersion", "1.2.1.0");
-        res.set("ProductVersion", "1.2.1.0");
+        res.set("FileVersion", "1.2.2.0");
+        res.set("ProductVersion", "1.2.2.0");
         res.set("ProductName", "WorkBench-Pro");
         res.set("FileDescription", "WorkBench-Pro - Developer Workstation Benchmark");
         res.set("LegalCopyright", "Copyright © 2025 Johan Moreau");

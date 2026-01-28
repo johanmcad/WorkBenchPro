@@ -104,6 +104,13 @@ pub struct WorkBenchProApp {
     remove_upload_error: Option<String>,
     remove_upload_run_index: Option<usize>,
 
+    // Delete confirmation dialog state
+    show_delete_dialog: bool,
+    delete_run_index: Option<usize>,
+    delete_also_cloud: bool,
+    delete_password: String,
+    delete_error: Option<String>,
+
     // Save error (for debugging)
     last_save_error: Option<String>,
 }
@@ -157,6 +164,13 @@ impl WorkBenchProApp {
             remove_upload_password: String::new(),
             remove_upload_error: None,
             remove_upload_run_index: None,
+
+            // Delete confirmation dialog
+            show_delete_dialog: false,
+            delete_run_index: None,
+            delete_also_cloud: false,
+            delete_password: String::new(),
+            delete_error: None,
 
             // Save error
             last_save_error: None,
@@ -321,14 +335,62 @@ impl WorkBenchProApp {
         self.history_runs = self.history_storage.load_all().unwrap_or_default();
     }
 
-    fn delete_history_run(&mut self, idx: usize) {
-        if idx < self.history_runs.len() {
-            let run = &self.history_runs[idx];
-            if let Err(e) = self.history_storage.delete(run) {
-                tracing::error!("Failed to delete run: {}", e);
-            }
-            self.reload_history();
+    fn open_delete_dialog(&mut self, idx: usize) {
+        self.delete_run_index = Some(idx);
+        self.delete_also_cloud = false;
+        self.delete_password = String::new();
+        self.delete_error = None;
+        self.show_delete_dialog = true;
+    }
+
+    fn reset_delete_dialog(&mut self) {
+        self.show_delete_dialog = false;
+        self.delete_run_index = None;
+        self.delete_also_cloud = false;
+        self.delete_password = String::new();
+        self.delete_error = None;
+    }
+
+    fn execute_delete(&mut self) {
+        let Some(idx) = self.delete_run_index else {
+            return;
+        };
+
+        if idx >= self.history_runs.len() {
+            self.reset_delete_dialog();
+            return;
         }
+
+        let run = &self.history_runs[idx];
+        let is_uploaded = run.uploaded_at.is_some();
+
+        // If user wants to delete from cloud too, verify password first
+        if self.delete_also_cloud && is_uploaded {
+            if !verify_admin_password(&self.delete_password) {
+                self.delete_error = Some("Invalid admin password".to_string());
+                return;
+            }
+
+            // Delete from cloud
+            if let Some(ref remote_id) = run.remote_id {
+                match CloudClient::new().delete(remote_id) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        self.delete_error = Some(format!("Failed to delete from cloud: {}", e));
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Delete local file
+        if let Err(e) = self.history_storage.delete(run) {
+            self.delete_error = Some(format!("Failed to delete local file: {}", e));
+            return;
+        }
+
+        self.reset_delete_dialog();
+        self.reload_history();
     }
 
     fn open_remove_upload_dialog(&mut self, idx: usize) {
@@ -729,6 +791,96 @@ impl eframe::App for WorkBenchProApp {
             self.remove_upload();
         }
 
+        // Show delete confirmation dialog
+        let mut delete_should_close = false;
+        let mut delete_should_confirm = false;
+
+        if self.show_delete_dialog {
+            let is_uploaded = self.delete_run_index
+                .and_then(|idx| self.history_runs.get(idx))
+                .map(|r| r.uploaded_at.is_some())
+                .unwrap_or(false);
+
+            egui::Window::new("Delete Benchmark")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
+                .show(ctx, |ui| {
+                    ui.set_min_width(320.0);
+
+                    ui.vertical(|ui| {
+                        ui.label(
+                            egui::RichText::new("Are you sure you want to delete this benchmark?")
+                                .size(Theme::SIZE_BODY),
+                        );
+                        ui.add_space(8.0);
+
+                        if is_uploaded {
+                            ui.checkbox(
+                                &mut self.delete_also_cloud,
+                                "Also remove from community results",
+                            );
+
+                            if self.delete_also_cloud {
+                                ui.add_space(8.0);
+                                ui.label(
+                                    egui::RichText::new("Admin password required:")
+                                        .size(Theme::SIZE_CAPTION)
+                                        .color(Theme::TEXT_SECONDARY),
+                                );
+                                let response = ui.add(
+                                    egui::TextEdit::singleline(&mut self.delete_password)
+                                        .password(true)
+                                        .desired_width(300.0)
+                                        .hint_text("Admin password"),
+                                );
+
+                                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                                    delete_should_confirm = true;
+                                }
+                            }
+                        }
+
+                        if let Some(ref err) = self.delete_error {
+                            ui.add_space(8.0);
+                            ui.label(
+                                egui::RichText::new(err)
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::ERROR),
+                            );
+                        }
+
+                        ui.add_space(12.0);
+
+                        ui.horizontal(|ui| {
+                            if ui.button("Cancel").clicked() {
+                                delete_should_close = true;
+                            }
+
+                            ui.add_space(8.0);
+
+                            let delete_btn = egui::Button::new(
+                                egui::RichText::new("Delete")
+                                    .color(egui::Color32::WHITE),
+                            )
+                            .fill(Theme::ERROR);
+
+                            if ui.add(delete_btn).clicked() {
+                                delete_should_confirm = true;
+                            }
+                        });
+                    });
+                });
+        }
+
+        if delete_should_close {
+            self.reset_delete_dialog();
+        }
+
+        if delete_should_confirm {
+            self.execute_delete();
+        }
+
         // Handle home actions
         match home_action {
             HomeAction::None => {}
@@ -806,7 +958,7 @@ impl eframe::App for WorkBenchProApp {
                 self.open_remove_upload_dialog(idx);
             }
             HistoryAction::DeleteRun(idx) => {
-                self.delete_history_run(idx);
+                self.open_delete_dialog(idx);
             }
         }
     }
