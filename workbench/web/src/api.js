@@ -135,6 +135,20 @@ export async function fetchPercentileRank(runId) {
   return response.json()
 }
 
+// Fetch all sample values for a specific test
+export async function fetchTestSamples(testId) {
+  const url = `${SUPABASE_URL}/rest/v1/rpc/get_test_samples`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ p_test_id: testId })
+  })
+  if (!response.ok) {
+    throw new Error(`Failed to fetch test samples: ${response.status}`)
+  }
+  return response.json()
+}
+
 // GitHub Releases API for download links
 export async function fetchLatestRelease() {
   try {

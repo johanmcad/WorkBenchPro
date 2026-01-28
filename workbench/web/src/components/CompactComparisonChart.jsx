@@ -1,5 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
+import { fetchTestSamples } from '../api'
 
 // Test descriptions from benchmark specifications
 const TEST_DESCRIPTIONS = {
@@ -268,8 +269,23 @@ function inferHigherIsBetter(unit) {
 }
 
 function TestRow({ test, selections, isExpanded, onToggle }) {
-  const { test_name, min_value, max_value, p50, p25, p75, p90, p95, unit, sample_count } = test
+  const { test_id, test_name, min_value, max_value, p50, p25, p75, p90, p95, unit, sample_count } = test
   const testSelections = test.selections || []
+
+  // State for all community samples
+  const [samples, setSamples] = useState([])
+  const [loadingSamples, setLoadingSamples] = useState(false)
+
+  // Fetch samples when expanded
+  useEffect(() => {
+    if (isExpanded && samples.length === 0 && !loadingSamples) {
+      setLoadingSamples(true)
+      fetchTestSamples(test_id)
+        .then(data => setSamples(data || []))
+        .catch(err => console.error('Failed to fetch samples:', err))
+        .finally(() => setLoadingSamples(false))
+    }
+  }, [isExpanded, test_id, samples.length, loadingSamples])
 
   // Use inferred value based on unit
   const isHigherBetter = inferHigherIsBetter(unit)
@@ -354,6 +370,29 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
                 background: 'linear-gradient(90deg, rgba(239,68,68,0.3) 0%, rgba(59,130,246,0.3) 50%, rgba(16,185,129,0.3) 100%)'
               }}
             />
+
+            {/* Community sample dots - show when expanded */}
+            {isExpanded && samples.map((sample, index) => {
+              let position = range > 0 ? ((sample.value - min_value) / range) * 100 : 50
+              if (!isHigherBetter) {
+                position = 100 - position
+              }
+              return (
+                <div
+                  key={`${sample.run_id}-${index}`}
+                  className="absolute top-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${Math.min(Math.max(position, 0), 100)}%`,
+                    zIndex: 5,
+                  }}
+                  title={`${sample.display_name}: ${formatValue(sample.value)} ${unit}`}
+                >
+                  <div className="relative -translate-x-1/2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-wb-text-secondary/40" />
+                  </div>
+                </div>
+              )
+            })}
 
             {/* Median marker */}
             <div
