@@ -425,12 +425,18 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
               <div className="text-yellow-400 font-medium">{formatValue(p50)} {unit}</div>
             </div>
             <div>
-              <div className="text-wb-text-secondary text-[10px]">Min</div>
+              <div className="text-wb-text-secondary text-[10px]">Min {isHigherBetter ? '(Slowest)' : '(Fastest)'}</div>
               <div className="text-white">{formatValue(min_value)} {unit}</div>
+              {test.min_machine && (
+                <div className="text-[10px] text-wb-text-secondary truncate">{test.min_machine}</div>
+              )}
             </div>
             <div>
-              <div className="text-wb-text-secondary text-[10px]">Max</div>
+              <div className="text-wb-text-secondary text-[10px]">Max {isHigherBetter ? '(Fastest)' : '(Slowest)'}</div>
               <div className="text-white">{formatValue(max_value)} {unit}</div>
+              {test.max_machine && (
+                <div className="text-[10px] text-wb-text-secondary truncate">{test.max_machine}</div>
+              )}
             </div>
             {sample_count !== undefined && (
               <div>
