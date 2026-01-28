@@ -55,7 +55,7 @@ impl Benchmark for ProcessesBenchmark {
         // Test 1: Basic process list
         progress.update(0.1, "Listing processes...");
 
-        for round in 0..5 {
+        for round in 0..3 {
             if progress.is_cancelled() {
                 return Err(anyhow::anyhow!("Cancelled"));
             }
@@ -72,15 +72,15 @@ impl Benchmark for ProcessesBenchmark {
             list_times.push(timer.elapsed_secs() * 1000.0);
 
             progress.update(
-                0.1 + (round as f32 / 5.0) * 0.3,
-                &format!("Process list round {}/5...", round + 1),
+                0.1 + (round as f32 / 3.0) * 0.3,
+                &format!("Process list round {}/3...", round + 1),
             );
         }
 
         // Test 2: Verbose/detailed process list
         progress.update(0.4, "Detailed process query...");
 
-        for round in 0..5 {
+        for round in 0..3 {
             if progress.is_cancelled() {
                 return Err(anyhow::anyhow!("Cancelled"));
             }
@@ -98,8 +98,8 @@ impl Benchmark for ProcessesBenchmark {
             verbose_times.push(timer.elapsed_secs() * 1000.0);
 
             progress.update(
-                0.4 + (round as f32 / 5.0) * 0.3,
-                &format!("Verbose list round {}/5...", round + 1),
+                0.4 + (round as f32 / 3.0) * 0.3,
+                &format!("Verbose list round {}/3...", round + 1),
             );
         }
 

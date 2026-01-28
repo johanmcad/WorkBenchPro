@@ -55,7 +55,21 @@
       "Bash(ss:*)",
       "Bash(better →\" legend indicator\n- Bar gradient: red \\(left/worse\\) to green \\(right/better\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
       "Bash(git restore:*)",
-      "Bash(gh release:*)"
+      "Bash(gh release:*)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" status)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" diff --stat)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" add web/src/components/CompactComparisonChart.jsx web/src/components/Navbar.jsx web/src/pages/ResultsPage.jsx)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" commit -m \"$\\(cat <<''EOF''\nAdd multi-select comparison \\(up to 3\\) with color coding\n\n- Allow selecting up to 3 computers for side-by-side comparison\n- Color-coded markers \\(green, blue, orange\\) on chart bars\n- Color-coded header cards showing all selected systems\n- Updated legend to show all selections with their colors\n- Fix download button navigation from results page\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" push)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" add src/benchmarks/apps/csharp_compile.rs web/src/components/CompactComparisonChart.jsx)",
+      "Bash(git -C \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\" commit -m \"$\\(cat <<''EOF''\nRewrite C# Compilation test to use dotnet SDK\n\n- Replace csc.exe \\(requires .NET Framework\\) with dotnet build \\(more common\\)\n- Create realistic multi-file C# project with:\n  - Models \\(DataItem, DataContainer, Result<T>, records\\)\n  - Processing classes \\(sync, async, parallel\\)\n  - Math calculator with 30+ methods and Matrix class\n  - Utilities \\(StringUtils, CollectionUtils, Logger, Cache\\)\n- Test compiles project with dotnet build --configuration Release\n- Requires .NET SDK to be installed\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(gh repo edit:*)",
+      "Bash(timeout:*)",
+      "Bash(cargo test:*)",
+      "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\WorkBench* 2>nul\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\Temp\\\\WorkBench* 2>nul\")",
+      "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData run_*.json 2>nul\")",
+      "Bash(cmd /c \"dir C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\WorkBench-Pro\\\\history\")"
     ]
   }
 }

@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::Duration;
 
@@ -42,6 +42,11 @@ impl AppLaunchBenchmark {
     /// Check if we're on Windows
     fn is_windows() -> bool {
         cfg!(target_os = "windows")
+    }
+
+    /// Check if an executable exists at the given path
+    fn exe_exists(path: &str) -> bool {
+        Path::new(path).exists()
     }
 
     /// Get list of apps to test based on platform
@@ -138,13 +143,16 @@ impl Benchmark for AppLaunchBenchmark {
                     // Use system32_path to get full path for system executables
                     let cmd_path = system32_path(args[0]);
 
+                    // Skip apps that don't exist (some can be uninstalled on Win10/11)
+                    if !Self::exe_exists(&cmd_path) {
+                        continue;
+                    }
+
                     // Special handling for different apps
                     match *app_name {
-                        "notepad" | "mspaint" => {
-                            // Launch GUI app and kill after window appears
-                            let child = Command::new(&cmd_path)
-                                .arg(test_file.to_str().unwrap_or(""))
-                                .spawn();
+                        "notepad" => {
+                            // Launch Notepad without file argument for reliability
+                            let child = Command::new(&cmd_path).spawn();
 
                             if let Ok(mut c) = child {
                                 // Wait for app window to appear (300ms should be enough)
@@ -154,6 +162,21 @@ impl Benchmark for AppLaunchBenchmark {
                                 // Also use taskkill as fallback to ensure process is terminated
                                 let _ = system_command("taskkill.exe")
                                     .args(["/F", "/IM", args[0]])
+                                    .output();
+                            }
+                        }
+                        "mspaint" => {
+                            // Launch Paint WITHOUT a file argument to avoid error dialogs
+                            // Paint shows an error if the file doesn't exist or path is invalid
+                            let child = Command::new(&cmd_path).spawn();
+
+                            if let Ok(mut c) = child {
+                                // Wait for app window to appear
+                                std::thread::sleep(Duration::from_millis(300));
+                                let _ = c.kill();
+                                let _ = c.wait();
+                                let _ = system_command("taskkill.exe")
+                                    .args(["/F", "/IM", "mspaint.exe"])
                                     .output();
                             }
                         }

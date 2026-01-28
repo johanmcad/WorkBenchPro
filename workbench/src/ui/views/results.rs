@@ -1,5 +1,6 @@
 use egui::{Align, Layout, RichText, Ui};
 
+use crate::core::{RecommendationCategory, RecommendationPriority, RecommendationsReport};
 use crate::models::BenchmarkRun;
 use crate::ui::widgets::{CategorySummaryCard, MachineInfoCard};
 use crate::ui::Theme;
@@ -130,8 +131,15 @@ impl ResultsView {
     }
 
     /// Returns ResultsAction for the main results view with online features
-    pub fn show_with_save(ui: &mut Ui, run: &BenchmarkRun) -> ResultsAction {
+    pub fn show_with_save(
+        ui: &mut Ui,
+        run: &BenchmarkRun,
+        recommendations: Option<&RecommendationsReport>,
+    ) -> ResultsAction {
         let mut action = ResultsAction::None;
+
+        // Fixed window size that fits all content
+        ui.ctx().send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(750.0, 920.0)));
 
         egui::ScrollArea::vertical().show(ui, |ui| {
             ui.with_layout(Layout::top_down(Align::Center), |ui| {
@@ -227,6 +235,12 @@ impl ResultsView {
                 Self::show_category_details(ui, "Responsiveness", &run.results.responsiveness);
 
                 ui.add_space(16.0);
+
+                // Recommendations Section
+                if let Some(report) = recommendations {
+                    Self::show_recommendations(ui, report);
+                    ui.add_space(16.0);
+                }
 
                 // Action Buttons
                 ui.horizontal(|ui| {
@@ -401,5 +415,188 @@ impl ResultsView {
         } else {
             format!("{:.3}", value)
         }
+    }
+
+    fn show_recommendations(ui: &mut Ui, report: &RecommendationsReport) {
+        if report.recommendations.is_empty() {
+            return;
+        }
+
+        ui.label(
+            RichText::new("Optimization Recommendations")
+                .size(Theme::SIZE_CARD)
+                .strong()
+                .color(Theme::TEXT_PRIMARY),
+        );
+        ui.add_space(4.0);
+
+        // Show device type and overall percentile if available
+        ui.horizontal(|ui| {
+            ui.label(
+                RichText::new(format!("Device Type: {}", report.device_type.label()))
+                    .size(Theme::SIZE_CAPTION)
+                    .color(Theme::TEXT_SECONDARY),
+            );
+            if let Some(percentile) = report.overall_percentile {
+                ui.label(RichText::new(" | ").size(Theme::SIZE_CAPTION).color(Theme::TEXT_SECONDARY));
+                ui.label(
+                    RichText::new(format!("Overall: P{:.0}", percentile))
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::ACCENT),
+                );
+            }
+        });
+
+        ui.add_space(8.0);
+
+        egui::Frame::none()
+            .fill(Theme::BG_CARD)
+            .stroke(egui::Stroke::new(1.0, Theme::BORDER))
+            .rounding(Theme::CARD_ROUNDING)
+            .inner_margin(8.0)
+            .show(ui, |ui| {
+                ui.set_min_width(600.0);
+
+                for (idx, recommendation) in report.recommendations.iter().enumerate() {
+                    Self::show_recommendation(ui, recommendation, idx);
+                    if idx < report.recommendations.len() - 1 {
+                        ui.add_space(4.0);
+                        ui.separator();
+                        ui.add_space(4.0);
+                    }
+                }
+            });
+    }
+
+    fn show_recommendation(ui: &mut Ui, rec: &crate::core::Recommendation, idx: usize) {
+        // Priority badge colors
+        let (priority_color, priority_bg) = match rec.priority {
+            RecommendationPriority::High => (
+                egui::Color32::WHITE,
+                Theme::ERROR,
+            ),
+            RecommendationPriority::Medium => (
+                egui::Color32::WHITE,
+                Theme::WARNING,
+            ),
+            RecommendationPriority::Low => (
+                Theme::TEXT_PRIMARY,
+                egui::Color32::from_rgb(229, 231, 235),
+            ),
+        };
+
+        // Category badge color
+        let category_bg = match rec.category {
+            RecommendationCategory::Software => egui::Color32::from_rgb(219, 234, 254), // Light blue
+            RecommendationCategory::Hardware => egui::Color32::from_rgb(254, 226, 226), // Light red
+        };
+
+        egui::CollapsingHeader::new(
+            RichText::new(&rec.title)
+                .size(Theme::SIZE_BODY)
+                .color(Theme::TEXT_PRIMARY),
+        )
+        .id_salt(format!("rec_{}", idx))
+        .default_open(rec.priority == RecommendationPriority::High)
+        .show(ui, |ui| {
+            // Badges row
+            ui.horizontal(|ui| {
+                // Priority badge
+                egui::Frame::none()
+                    .fill(priority_bg)
+                    .rounding(2.0)
+                    .inner_margin(egui::vec2(4.0, 2.0))
+                    .show(ui, |ui| {
+                        ui.label(
+                            RichText::new(rec.priority.label())
+                                .size(10.0)
+                                .color(priority_color)
+                                .strong(),
+                        );
+                    });
+
+                ui.add_space(4.0);
+
+                // Category badge
+                egui::Frame::none()
+                    .fill(category_bg)
+                    .rounding(2.0)
+                    .inner_margin(egui::vec2(4.0, 2.0))
+                    .show(ui, |ui| {
+                        ui.label(
+                            RichText::new(rec.category.label())
+                                .size(10.0)
+                                .color(Theme::TEXT_PRIMARY),
+                        );
+                    });
+
+                ui.add_space(8.0);
+
+                // Expected improvement
+                ui.label(
+                    RichText::new(&rec.expected_improvement)
+                        .size(Theme::SIZE_CAPTION)
+                        .color(Theme::SUCCESS)
+                        .italics(),
+                );
+            });
+
+            ui.add_space(6.0);
+
+            // Description
+            ui.label(
+                RichText::new(&rec.description)
+                    .size(Theme::SIZE_CAPTION)
+                    .color(Theme::TEXT_SECONDARY),
+            );
+
+            ui.add_space(6.0);
+
+            // Affected tests
+            if !rec.affected_tests.is_empty() {
+                ui.horizontal(|ui| {
+                    ui.label(
+                        RichText::new("Affects:")
+                            .size(Theme::SIZE_CAPTION)
+                            .strong()
+                            .color(Theme::TEXT_SECONDARY),
+                    );
+                    ui.label(
+                        RichText::new(rec.affected_tests.join(", "))
+                            .size(Theme::SIZE_CAPTION)
+                            .color(Theme::TEXT_SECONDARY),
+                    );
+                });
+            }
+
+            // How to apply (collapsible)
+            if !rec.how_to_apply.is_empty() {
+                ui.add_space(4.0);
+                egui::CollapsingHeader::new(
+                    RichText::new("How to Apply")
+                        .size(Theme::SIZE_CAPTION)
+                        .strong()
+                        .color(Theme::ACCENT),
+                )
+                .id_salt(format!("how_to_{}", idx))
+                .default_open(false)
+                .show(ui, |ui| {
+                    for (step_idx, step) in rec.how_to_apply.iter().enumerate() {
+                        ui.horizontal(|ui| {
+                            ui.label(
+                                RichText::new(format!("{}.", step_idx + 1))
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::TEXT_SECONDARY),
+                            );
+                            ui.label(
+                                RichText::new(step)
+                                    .size(Theme::SIZE_CAPTION)
+                                    .color(Theme::TEXT_PRIMARY),
+                            );
+                        });
+                    }
+                });
+            }
+        });
     }
 }

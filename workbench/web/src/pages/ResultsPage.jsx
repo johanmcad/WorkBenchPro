@@ -521,12 +521,6 @@ export default function ResultsPage() {
                             )}
                           </div>
                           <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
-                            {result.description && (
-                              <>
-                                <span className="text-wb-accent">{result.description}</span>
-                                <span>•</span>
-                              </>
-                            )}
                             <span className="truncate">{result.cpu_name}</span>
                             <span>•</span>
                             <span>{Math.round(result.memory_gb)}GB</span>
@@ -601,12 +595,6 @@ export default function ResultsPage() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 mt-1 text-[10px] text-wb-text-secondary">
-                          {result.description && (
-                            <>
-                              <span className="text-wb-accent">{result.description}</span>
-                              <span>•</span>
-                            </>
-                          )}
                           <span className="truncate">{result.cpu_name}</span>
                           <span>•</span>
                           <span>{Math.round(result.memory_gb)}GB</span>

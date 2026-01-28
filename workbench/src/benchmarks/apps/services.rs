@@ -75,7 +75,7 @@ impl Benchmark for ServicesBenchmark {
         // Test 1: Query all services
         progress.update(0.1, "Querying all services...");
 
-        for round in 0..5 {
+        for round in 0..3 {
             if progress.is_cancelled() {
                 return Err(anyhow::anyhow!("Cancelled"));
             }
@@ -87,8 +87,8 @@ impl Benchmark for ServicesBenchmark {
             query_all_times.push(timer.elapsed_secs() * 1000.0);
 
             progress.update(
-                0.1 + (round as f32 / 5.0) * 0.3,
-                &format!("Query all round {}/5...", round + 1),
+                0.1 + (round as f32 / 3.0) * 0.3,
+                &format!("Query all round {}/3...", round + 1),
             );
         }
 

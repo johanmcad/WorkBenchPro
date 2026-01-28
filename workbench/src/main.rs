@@ -11,6 +11,10 @@ mod ui;
 use anyhow::Result;
 use eframe::egui;
 use std::path::PathBuf;
+use std::sync::Arc;
+
+// Embed the icon PNG for window icon
+static ICON_PNG: &[u8] = include_bytes!("../assets/icon.png");
 
 // Embed SwiftShader files directly in the executable
 #[cfg(windows)]
@@ -65,6 +69,17 @@ fn get_swiftshader_dir() -> PathBuf {
     std::env::temp_dir().join("workbench_pro_swiftshader")
 }
 
+/// Load embedded icon as IconData for window icon
+fn load_icon() -> Option<egui::IconData> {
+    let image = image::load_from_memory(ICON_PNG).ok()?.into_rgba8();
+    let (width, height) = image.dimensions();
+    Some(egui::IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    })
+}
+
 fn main() -> Result<()> {
     // Extract and configure SwiftShader for software rendering
     setup_swiftshader();
@@ -84,11 +99,20 @@ fn main() -> Result<()> {
         eframe::Renderer::Wgpu
     };
 
+    // Load window icon
+    let icon = load_icon();
+
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_inner_size([755.0, 400.0])
+        .with_min_inner_size([600.0, 350.0])
+        .with_title("WorkBench-Pro - Developer Workstation Benchmark");
+
+    if let Some(icon_data) = icon {
+        viewport = viewport.with_icon(Arc::new(icon_data));
+    }
+
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_inner_size([720.0, 400.0])
-            .with_min_inner_size([600.0, 350.0])
-            .with_title("WorkBench-Pro - Developer Workstation Benchmark"),
+        viewport,
         renderer,
         wgpu_options: eframe::egui_wgpu::WgpuConfiguration {
             #[cfg(windows)]

@@ -8,22 +8,29 @@ use crate::models::BenchmarkRun;
 /// Manages storage and retrieval of benchmark history
 pub struct HistoryStorage {
     storage_dir: PathBuf,
+    /// Last load statistics for debugging
+    pub last_load_stats: Option<(usize, usize, Option<String>)>, // (files_found, files_loaded, last_error)
 }
 
 impl HistoryStorage {
     /// Create a new history storage instance
     pub fn new() -> Self {
         let storage_dir = Self::get_storage_dir();
-        Self { storage_dir }
+        Self {
+            storage_dir,
+            last_load_stats: None,
+        }
     }
 
     /// Get the storage directory path
     fn get_storage_dir() -> PathBuf {
-        // Use platform-appropriate app data directory
+        // Use platform-appropriate app data directory via environment variables only
         let base = if cfg!(target_os = "windows") {
-            std::env::var("LOCALAPPDATA")
+            // Use LOCALAPPDATA or APPDATA environment variables
+            std::env::var_os("LOCALAPPDATA")
+                .or_else(|| std::env::var_os("APPDATA"))
                 .map(PathBuf::from)
-                .unwrap_or_else(|_| std::env::temp_dir())
+                .unwrap_or_else(std::env::temp_dir)
         } else if cfg!(target_os = "macos") {
             dirs::home_dir()
                 .map(|h| h.join("Library/Application Support"))
@@ -35,6 +42,11 @@ impl HistoryStorage {
         };
 
         base.join("WorkBench-Pro").join("history")
+    }
+
+    /// Get the storage directory path (for debugging)
+    pub fn storage_path(&self) -> &PathBuf {
+        &self.storage_dir
     }
 
     /// Ensure storage directory exists
@@ -62,23 +74,50 @@ impl HistoryStorage {
     }
 
     /// Load all saved benchmark runs
-    pub fn load_all(&self) -> Result<Vec<BenchmarkRun>> {
+    pub fn load_all(&mut self) -> Result<Vec<BenchmarkRun>> {
         self.ensure_dir()?;
 
         let mut runs = Vec::new();
+        let mut files_found = 0;
+        let mut last_error: Option<String> = None;
 
-        if let Ok(entries) = fs::read_dir(&self.storage_dir) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().map_or(false, |e| e == "json") {
-                    if let Ok(contents) = fs::read_to_string(&path) {
-                        if let Ok(run) = serde_json::from_str::<BenchmarkRun>(&contents) {
-                            runs.push(run);
+        match fs::read_dir(&self.storage_dir) {
+            Ok(entries) => {
+                for entry in entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().map_or(false, |e| e == "json") {
+                        files_found += 1;
+                        match fs::read_to_string(&path) {
+                            Ok(contents) => {
+                                match serde_json::from_str::<BenchmarkRun>(&contents) {
+                                    Ok(run) => runs.push(run),
+                                    Err(e) => {
+                                        last_error = Some(format!(
+                                            "Parse error in {}: {}",
+                                            path.file_name().unwrap_or_default().to_string_lossy(),
+                                            e
+                                        ));
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                last_error = Some(format!(
+                                    "Read error {}: {}",
+                                    path.file_name().unwrap_or_default().to_string_lossy(),
+                                    e
+                                ));
+                            }
                         }
                     }
                 }
             }
+            Err(e) => {
+                last_error = Some(format!("Directory read error: {}", e));
+            }
         }
+
+        // Store load stats for debugging
+        self.last_load_stats = Some((files_found, runs.len(), last_error));
 
         // Sort by timestamp, newest first
         runs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -87,7 +126,7 @@ impl HistoryStorage {
     }
 
     /// Load the most recent N runs
-    pub fn load_recent(&self, count: usize) -> Result<Vec<BenchmarkRun>> {
+    pub fn load_recent(&mut self, count: usize) -> Result<Vec<BenchmarkRun>> {
         let all = self.load_all()?;
         Ok(all.into_iter().take(count).collect())
     }
@@ -116,7 +155,7 @@ impl HistoryStorage {
     }
 
     /// Get number of saved runs
-    pub fn count(&self) -> usize {
+    pub fn count(&mut self) -> usize {
         self.load_all().map(|r| r.len()).unwrap_or(0)
     }
 }

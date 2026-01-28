@@ -1,4 +1,4 @@
-use std::sync::mpsc::Receiver;
+use std::sync::mpsc::{self, Receiver};
 
 use eframe::egui;
 use sha2::{Sha256, Digest};
@@ -22,11 +22,14 @@ use crate::benchmarks::latency::{
 use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
 use crate::benchmarks::Benchmark;
 use crate::cloud::CloudClient;
-use crate::core::{BenchmarkMessage, BenchmarkRunner, SystemInfoCollector};
+use crate::core::{
+    BenchmarkMessage, BenchmarkRunner, RecommendationEngine, RecommendationsReport,
+    SystemCheckResult, SystemChecker, SystemInfoCollector,
+};
 use crate::models::{BenchmarkRun, SystemInfo};
 use crate::storage::HistoryStorage;
 use crate::ui::views::{
-    HistoryAction, HistoryView, HomeAction, HomeView,
+    HistoryAction, HistoryView, HomeAction, HomeView, PreCheckAction, PreCheckView,
     ResultsAction, ResultsView, RunningView,
 };
 use crate::ui::Theme;
@@ -46,6 +49,7 @@ fn verify_admin_password(password: &str) -> bool {
 #[derive(Debug, Clone, PartialEq, Eq)]
 enum AppState {
     Home,
+    PreCheck,
     Running,
     Results,
     History,
@@ -66,8 +70,13 @@ pub struct WorkBenchProApp {
     current_message: String,
     completed_tests: Vec<String>,
 
+    // Pre-check
+    system_check: Option<SystemCheckResult>,
+    system_check_receiver: Option<Receiver<SystemCheckResult>>,
+
     // Results
     last_run: Option<BenchmarkRun>,
+    recommendations: Option<RecommendationsReport>,
 
     // History
     history_storage: HistoryStorage,
@@ -86,11 +95,17 @@ pub struct WorkBenchProApp {
     upload_success: bool,
     upload_run_index: Option<usize>, // Index of run being uploaded (None = last_run)
 
+    // Window resize flag (for deferred resize after benchmark completes)
+    pending_window_resize: Option<egui::Vec2>,
+
     // Remove upload dialog state
     show_remove_upload_dialog: bool,
     remove_upload_password: String,
     remove_upload_error: Option<String>,
     remove_upload_run_index: Option<usize>,
+
+    // Save error (for debugging)
+    last_save_error: Option<String>,
 }
 
 impl WorkBenchProApp {
@@ -103,7 +118,7 @@ impl WorkBenchProApp {
         let machine_name = system_info.hostname.clone();
 
         // Load history
-        let history_storage = HistoryStorage::new();
+        let mut history_storage = HistoryStorage::new();
         let history_runs = history_storage.load_all().unwrap_or_default();
 
         Self {
@@ -116,7 +131,10 @@ impl WorkBenchProApp {
             current_test: String::new(),
             current_message: String::new(),
             completed_tests: Vec::new(),
+            system_check: None,
+            system_check_receiver: None,
             last_run: None,
+            recommendations: None,
             history_storage,
             history_runs,
             // Cloud state
@@ -131,11 +149,43 @@ impl WorkBenchProApp {
             upload_success: false,
             upload_run_index: None,
 
+            // Window resize
+            pending_window_resize: None,
+
             // Remove upload dialog
             show_remove_upload_dialog: false,
             remove_upload_password: String::new(),
             remove_upload_error: None,
             remove_upload_run_index: None,
+
+            // Save error
+            last_save_error: None,
+        }
+    }
+
+    fn run_system_check(&mut self) {
+        // Clear previous check result
+        self.system_check = None;
+
+        // Create channel for receiving check result
+        let (tx, rx) = mpsc::channel();
+        self.system_check_receiver = Some(rx);
+
+        // Run check in background thread
+        std::thread::spawn(move || {
+            let result = SystemChecker::check();
+            let _ = tx.send(result);
+        });
+
+        self.state = AppState::PreCheck;
+    }
+
+    fn process_system_check(&mut self) {
+        if let Some(ref rx) = self.system_check_receiver {
+            if let Ok(result) = rx.try_recv() {
+                self.system_check = Some(result);
+                self.system_check_receiver = None;
+            }
         }
     }
 
@@ -191,10 +241,12 @@ impl WorkBenchProApp {
         self.state = AppState::Running;
     }
 
-    fn cancel_benchmark(&mut self) {
+    fn cancel_benchmark(&mut self, ctx: &egui::Context) {
         self.runner.cancel();
         self.state = AppState::Home;
         self.receiver = None;
+        // Reset window size
+        ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 400.0)));
     }
 
     fn process_messages(&mut self) {
@@ -224,13 +276,27 @@ impl WorkBenchProApp {
                     }
                     BenchmarkMessage::AllComplete { run } => {
                         // Save to history
-                        if let Err(e) = self.history_storage.save(&run) {
-                            tracing::error!("Failed to save to history: {}", e);
+                        match self.history_storage.save(&run) {
+                            Ok(path) => {
+                                tracing::info!("Saved to: {}", path.display());
+                                self.last_save_error = None;
+                            }
+                            Err(e) => {
+                                let err_msg = format!("Failed to save: {}", e);
+                                tracing::error!("{}", err_msg);
+                                self.last_save_error = Some(err_msg);
+                            }
                         }
+
+                        // Generate recommendations
+                        // TODO: In future, fetch percentile ranks from cloud for comparison
+                        self.recommendations = Some(RecommendationEngine::analyze(&run, None));
 
                         self.last_run = Some(*run);
                         self.state = AppState::Results;
                         should_keep_receiver = false;
+
+                        // Results view will resize itself based on content
 
                         // Reload history
                         self.reload_history();
@@ -375,8 +441,17 @@ impl eframe::App for WorkBenchProApp {
         // Process any pending messages from the benchmark runner
         self.process_messages();
 
+        // Process system check if running
+        self.process_system_check();
+
+        // Process any pending window resize
+        if let Some(size) = self.pending_window_resize.take() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(size));
+        }
+
         // Determine actions needed
         let mut home_action = HomeAction::None;
+        let mut precheck_action = PreCheckAction::None;
         let mut action_cancel = false;
         let mut results_action = ResultsAction::None;
         let mut history_action = HistoryAction::None;
@@ -386,6 +461,9 @@ impl eframe::App for WorkBenchProApp {
             match &self.state {
                 AppState::Home => {
                     home_action = HomeView::show(ui, &self.system_info);
+                }
+                AppState::PreCheck => {
+                    precheck_action = PreCheckView::show(ui, self.system_check.as_ref());
                 }
                 AppState::Running => {
                     action_cancel = RunningView::show(
@@ -399,11 +477,17 @@ impl eframe::App for WorkBenchProApp {
                 }
                 AppState::Results => {
                     if let Some(run) = &self.last_run {
-                        results_action = ResultsView::show_with_save(ui, run);
+                        results_action = ResultsView::show_with_save(ui, run, self.recommendations.as_ref());
                     }
                 }
                 AppState::History => {
-                    history_action = HistoryView::show(ui, &self.history_runs);
+                    history_action = HistoryView::show(
+                        ui,
+                        &self.history_runs,
+                        Some(self.history_storage.storage_path()),
+                        self.last_save_error.as_deref(),
+                        self.history_storage.last_load_stats.as_ref(),
+                    );
                 }
                 AppState::ViewingHistoricRun(idx) => {
                     if let Some(run) = self.history_runs.get(*idx) {
@@ -649,7 +733,8 @@ impl eframe::App for WorkBenchProApp {
         match home_action {
             HomeAction::None => {}
             HomeAction::Run => {
-                self.start_benchmark();
+                // Go to pre-check first, not directly to running
+                self.run_system_check();
             }
             HomeAction::History => {
                 self.reload_history();
@@ -657,8 +742,28 @@ impl eframe::App for WorkBenchProApp {
             }
         }
 
+        // Handle pre-check actions
+        match precheck_action {
+            PreCheckAction::None => {}
+            PreCheckAction::Cancel => {
+                self.system_check = None;
+                self.system_check_receiver = None;
+                self.state = AppState::Home;
+                // Reset window size to default
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 400.0)));
+            }
+            PreCheckAction::Recheck => {
+                self.run_system_check();
+            }
+            PreCheckAction::Proceed => {
+                // Expand window for benchmark running view
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 750.0)));
+                self.start_benchmark();
+            }
+        }
+
         if action_cancel {
-            self.cancel_benchmark();
+            self.cancel_benchmark(ctx);
         }
 
         // Handle results actions
@@ -666,6 +771,8 @@ impl eframe::App for WorkBenchProApp {
             ResultsAction::None => {}
             ResultsAction::Back => {
                 self.state = AppState::Home;
+                // Reset window size to default
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 400.0)));
             }
             ResultsAction::History => {
                 self.reload_history();

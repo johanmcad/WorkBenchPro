@@ -19,6 +19,9 @@ impl HistoryView {
     pub fn show(
         ui: &mut Ui,
         runs: &[BenchmarkRun],
+        storage_path: Option<&std::path::Path>,
+        save_error: Option<&str>,
+        load_stats: Option<&(usize, usize, Option<String>)>,
     ) -> HistoryAction {
         let mut action = HistoryAction::None;
 
@@ -38,6 +41,43 @@ impl HistoryView {
                         .size(Theme::SIZE_CAPTION)
                         .color(Theme::TEXT_SECONDARY),
                 );
+
+                // Show storage path for debugging
+                if let Some(path) = storage_path {
+                    ui.label(
+                        RichText::new(format!("Storage: {}", path.display()))
+                            .size(10.0)
+                            .color(Theme::TEXT_SECONDARY),
+                    );
+                }
+
+                // Show load stats if there's an issue
+                if let Some((found, loaded, err)) = load_stats {
+                    if found != loaded || err.is_some() {
+                        ui.label(
+                            RichText::new(format!("Files: {} found, {} loaded", found, loaded))
+                                .size(10.0)
+                                .color(if found != loaded { Theme::WARNING } else { Theme::TEXT_SECONDARY }),
+                        );
+                        if let Some(e) = err {
+                            ui.label(
+                                RichText::new(e)
+                                    .size(10.0)
+                                    .color(Theme::ERROR),
+                            );
+                        }
+                    }
+                }
+
+                // Show save error if any
+                if let Some(err) = save_error {
+                    ui.add_space(4.0);
+                    ui.label(
+                        RichText::new(err)
+                            .size(Theme::SIZE_CAPTION)
+                            .color(Theme::ERROR),
+                    );
+                }
 
                 ui.add_space(8.0);
 

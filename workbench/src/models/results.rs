@@ -1,8 +1,16 @@
 use chrono::{DateTime, Utc};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use uuid::Uuid;
 
 use super::system_info::SystemInfo;
+
+/// Deserialize f64, treating null as 0.0 (handles NaN serialized as null)
+fn deserialize_f64_or_null<'de, D>(deserializer: D) -> Result<f64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    Option::<f64>::deserialize(deserializer).map(|opt| opt.unwrap_or(0.0))
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BenchmarkRun {
@@ -49,6 +57,7 @@ pub struct TestResult {
     pub test_id: String,
     pub name: String,
     pub description: String,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub value: f64,
     pub unit: String,
     pub details: TestDetails,
@@ -57,11 +66,17 @@ pub struct TestResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TestDetails {
     pub iterations: u32,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub duration_secs: f64,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub min: f64,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub max: f64,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub mean: f64,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub median: f64,
+    #[serde(deserialize_with = "deserialize_f64_or_null")]
     pub std_dev: f64,
     pub percentiles: Option<Percentiles>,
 }

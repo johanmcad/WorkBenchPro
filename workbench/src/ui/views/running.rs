@@ -153,8 +153,10 @@ impl RunningView {
                             ui.add_space(4.0);
 
                             egui::ScrollArea::vertical()
+                                .id_salt("completed_tests_scroll")
                                 .max_height(300.0)
                                 .show(ui, |ui| {
+                                    ui.set_min_width(396.0); // Card width minus padding
                                     for test in completed_tests.iter().rev() {
                                         ui.horizontal(|ui| {
                                             ui.label(
