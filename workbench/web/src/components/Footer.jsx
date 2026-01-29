@@ -19,7 +19,7 @@ export default function Footer() {
                   WorkBench-Pro - Real-World Workstation Benchmark
                 </span>
                 <span className="text-wb-text-secondary text-xs">
-                  © 2025 P&T AB
+                  © 2025 P&T AB · Johan Moreau
                 </span>
               </div>
             </div>
