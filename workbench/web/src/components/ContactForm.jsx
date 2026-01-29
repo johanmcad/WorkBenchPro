@@ -31,7 +31,7 @@ export default function ContactForm({ isOpen, onClose }) {
       }, 2000)
     } catch (error) {
       setStatus('error')
-      setErrorMessage('Failed to send message. Please try again later.')
+      setErrorMessage('Something went wrong. Try again in a bit.')
       console.error('Form submission error:', error)
     }
   }
@@ -66,7 +66,7 @@ export default function ContactForm({ isOpen, onClose }) {
           {status === 'success' && (
             <div className="flex items-center gap-3 p-4 bg-wb-success/20 border border-wb-success/50 rounded-lg">
               <CheckCircle size={20} className="text-wb-success" />
-              <p className="text-sm text-wb-success">Message sent successfully! We'll get back to you soon.</p>
+              <p className="text-sm text-wb-success">Got it! We'll get back to you soon.</p>
             </div>
           )}
 
@@ -127,7 +127,7 @@ export default function ContactForm({ isOpen, onClose }) {
               required
               rows={5}
               className="input w-full resize-none"
-              placeholder="How can we help you?"
+              placeholder="What's up?"
               disabled={status === 'sending'}
             />
           </div>

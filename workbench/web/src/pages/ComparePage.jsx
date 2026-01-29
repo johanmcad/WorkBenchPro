@@ -292,7 +292,7 @@ export default function ComparePage() {
         <div className="card text-center py-12">
           <GitCompare size={48} className="mx-auto text-wb-text-secondary mb-4" />
           <p className="text-wb-text-secondary">
-            Select two benchmark runs above to compare their results side-by-side.
+            Pick two runs above to see how they stack up.
           </p>
         </div>
       )}

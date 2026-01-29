@@ -629,7 +629,7 @@ export default function ResultsPage() {
             {selections.length === 0 ? (
               <div className="mb-6 p-4 rounded-lg bg-wb-bg-card border border-wb-border">
                 <p className="text-wb-text-secondary text-sm">
-                  Showing community statistics. Select a result from the left panel to compare your benchmark.
+                  Showing community stats. Pick a result on the left to compare.
                 </p>
               </div>
             ) : (
@@ -748,7 +748,7 @@ export default function ResultsPage() {
               </button>
             </div>
             <p className="text-wb-text-secondary mb-6">
-              Admin authentication required to remove this benchmark.
+              Need admin password to delete this.
             </p>
             <form onSubmit={handleDelete}>
               <div className="mb-4">
@@ -829,7 +829,7 @@ export default function ResultsPage() {
                   type="text"
                   value={editUserName}
                   onChange={(e) => setEditUserName(e.target.value)}
-                  placeholder="Your name or alias"
+                  placeholder="Your name"
                   className="input w-full"
                 />
               </div>

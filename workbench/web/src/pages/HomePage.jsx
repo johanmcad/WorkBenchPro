@@ -28,32 +28,32 @@ export default function HomePage() {
     {
       icon: Cpu,
       title: 'CPU Benchmarks',
-      description: 'Single-thread, multi-thread, and mixed workload tests that reflect real-world professional tasks.',
+      description: 'Tests your CPU with single-thread, multi-thread, and mixed workloads like you actually use.',
     },
     {
       icon: HardDrive,
       title: 'Disk Performance',
-      description: 'File enumeration, random reads, metadata operations, and directory traversal tests.',
+      description: 'Measures file operations, random reads, and directory scans like VS Code or git.',
     },
     {
       icon: Zap,
       title: 'Latency Tests',
-      description: 'Process spawn, thread wake, and storage latency measurements for system responsiveness.',
+      description: 'Measures how quickly your system responds to starting processes and accessing storage.',
     },
     {
       icon: Monitor,
-      title: 'Real-World Applications',
-      description: 'Build tools, archive operations, PowerShell scripts, and other professional workloads.',
+      title: 'Real Applications',
+      description: 'Tests with actual tools like tar, PowerShell, and common Windows apps.',
     },
     {
       icon: GitCompare,
       title: 'Compare Results',
-      description: 'Side-by-side comparison with community results or your own historical runs.',
+      description: 'See how you stack up against community results or your previous runs.',
     },
     {
       icon: Globe,
       title: 'Community Database',
-      description: 'Share your results and see how your machine compares to others.',
+      description: 'Share your results and see where your machine ranks.',
     },
   ]
 
@@ -121,10 +121,10 @@ export default function HomePage() {
               <span className="text-wb-accent-light"> Workstation</span>
             </h1>
             <p className="text-xl text-wb-text-secondary mb-4 max-w-2xl mx-auto">
-              <strong className="text-wb-text-primary">Measure what matters in real-world use.</strong> Benchmark your workstation's actual performance—CPU, disk, memory, and everyday applications like compilers, scripts, and file operations.
+              Test your PC with tasks that actually matter. CPU, disk, memory, and the apps you use every day like compilers and build tools.
             </p>
             <p className="text-lg text-wb-text-secondary mb-8 max-w-2xl mx-auto">
-              Not a GPU or gaming benchmark. Focused on <strong className="text-wb-text-primary">system responsiveness</strong> and <strong className="text-wb-text-primary">everyday usage</strong>—the things that affect how fast your machine feels.
+              Not a gaming benchmark. This measures how <strong className="text-wb-text-primary">responsive</strong> your system feels when you're actually working.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <a href="#download" className="btn-primary flex items-center justify-center gap-2 text-lg">
@@ -169,11 +169,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
-              Real-World Performance Testing
+              Real-World Performance
             </h2>
             <p className="text-wb-text-secondary text-lg max-w-2xl mx-auto">
-              Unlike synthetic benchmarks, WorkBench-Pro measures the operations that matter
-              for your daily professional workflow.
+              Tests the stuff you actually do every day, not artificial loops that don't mean anything.
             </p>
           </div>
 
@@ -211,7 +210,7 @@ export default function HomePage() {
             </p>
             <p className="text-wb-text-secondary max-w-2xl mx-auto">
               <strong className="text-wb-accent-light">Not a synthetic benchmark.</strong>{' '}
-              Unlike traditional benchmarks that measure peak theoretical performance, WorkBench-Pro tests the operations you actually use every day—how fast your system <em>feels</em>, not just how fast it can run artificial loops.
+              Traditional benchmarks show peak performance numbers that don't mean much in practice. This tests how fast your system <em>feels</em> when you're coding, compiling, or managing files.
             </p>
           </div>
 
@@ -262,7 +261,7 @@ export default function HomePage() {
             <Download className="mx-auto text-wb-accent-light mb-6" size={48} />
             <h2 className="text-3xl font-bold mb-4">Download WorkBench-Pro</h2>
             <p className="text-wb-text-secondary mb-8">
-              Available for Windows 10/11. No installation required - just download and run.
+              Works on Windows 10/11. Just download and run, no install needed.
             </p>
 
             <div className="space-y-4">
@@ -329,7 +328,7 @@ export default function HomePage() {
             See How Your Machine Compares
           </h2>
           <p className="text-wb-text-secondary text-lg mb-8 max-w-2xl mx-auto">
-            Browse community results and compare your workstation against similar configurations.
+            Check out community results and see how your PC stacks up.
           </p>
           <Link
             to="/results"
