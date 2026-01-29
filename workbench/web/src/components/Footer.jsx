@@ -14,9 +14,14 @@ export default function Footer() {
               <div className="w-8 h-8 bg-wb-accent rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold">W</span>
               </div>
-              <span className="text-wb-text-secondary">
-                WorkBench-Pro - Real-World Workstation Benchmark
-              </span>
+              <div className="flex flex-col">
+                <span className="text-wb-text-secondary">
+                  WorkBench-Pro - Real-World Workstation Benchmark
+                </span>
+                <span className="text-wb-text-secondary text-xs">
+                  © 2025 P&T AB
+                </span>
+              </div>
             </div>
 
             <div className="flex items-center gap-6">

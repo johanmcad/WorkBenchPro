@@ -11,8 +11,8 @@ fn main() {
         res.set("ProductVersion", "1.2.2.0");
         res.set("ProductName", "WorkBench-Pro");
         res.set("FileDescription", "WorkBench-Pro - Developer Workstation Benchmark");
-        res.set("LegalCopyright", "Copyright © 2025 Johan Moreau");
-        res.set("CompanyName", "Johan Moreau");
+        res.set("LegalCopyright", "Copyright © 2025 P&T AB");
+        res.set("CompanyName", "P&T AB");
         res.set("InternalName", "workbench-pro");
         res.set("OriginalFilename", "workbench-pro.exe");
 

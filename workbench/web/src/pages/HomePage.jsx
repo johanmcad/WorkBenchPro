@@ -261,8 +261,11 @@ export default function HomePage() {
           <div className="card max-w-3xl mx-auto text-center">
             <Download className="mx-auto text-wb-accent-light mb-6" size={48} />
             <h2 className="text-3xl font-bold mb-4">Download WorkBench-Pro</h2>
-            <p className="text-wb-text-secondary mb-8">
+            <p className="text-wb-text-secondary mb-2">
               Available for Windows 10/11. No installation required - just download and run.
+            </p>
+            <p className="text-wb-text-secondary text-sm mb-8">
+              Developed by <strong className="text-wb-text-primary">P&T AB</strong>
             </p>
 
             <div className="space-y-4">
