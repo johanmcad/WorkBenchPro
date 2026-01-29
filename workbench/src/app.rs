@@ -110,6 +110,7 @@ pub struct WorkBenchProApp {
     delete_also_cloud: bool,
     delete_password: String,
     delete_error: Option<String>,
+    delete_found_remote_id: Option<String>, // Remote ID found by matching, for runs without local remote_id
 
     // Save error (for debugging)
     last_save_error: Option<String>,
@@ -171,6 +172,7 @@ impl WorkBenchProApp {
             delete_also_cloud: false,
             delete_password: String::new(),
             delete_error: None,
+            delete_found_remote_id: None,
 
             // Save error
             last_save_error: None,
@@ -340,6 +342,18 @@ impl WorkBenchProApp {
         self.delete_also_cloud = false;
         self.delete_password = String::new();
         self.delete_error = None;
+        self.delete_found_remote_id = None;
+
+        // If the run doesn't have a remote_id locally, check if it exists in the cloud
+        if let Some(run) = self.history_runs.get(idx) {
+            if run.remote_id.is_none() {
+                // Try to find a matching record in the cloud
+                if let Ok(Some(remote_id)) = self.cloud_client.find_matching(&run.machine_name, &run.timestamp) {
+                    self.delete_found_remote_id = Some(remote_id);
+                }
+            }
+        }
+
         self.show_delete_dialog = true;
     }
 
@@ -349,6 +363,7 @@ impl WorkBenchProApp {
         self.delete_also_cloud = false;
         self.delete_password = String::new();
         self.delete_error = None;
+        self.delete_found_remote_id = None;
     }
 
     fn execute_delete(&mut self) {
@@ -362,17 +377,14 @@ impl WorkBenchProApp {
         }
 
         let run = &self.history_runs[idx];
-        let is_uploaded = run.uploaded_at.is_some();
 
-        // If user wants to delete from cloud too, verify password first
-        if self.delete_also_cloud && is_uploaded {
-            if !verify_admin_password(&self.delete_password) {
-                self.delete_error = Some("Invalid admin password".to_string());
-                return;
-            }
+        // Determine if there's a cloud record (either from local remote_id or found by matching)
+        let cloud_remote_id = run.remote_id.clone().or_else(|| self.delete_found_remote_id.clone());
+        let has_cloud_record = cloud_remote_id.is_some();
 
-            // Delete from cloud
-            if let Some(ref remote_id) = run.remote_id {
+        // If user wants to delete from cloud too - no password needed since having the local file proves ownership
+        if self.delete_also_cloud && has_cloud_record {
+            if let Some(ref remote_id) = cloud_remote_id {
                 match CloudClient::new().delete(remote_id) {
                     Ok(_) => {}
                     Err(e) => {
@@ -796,10 +808,12 @@ impl eframe::App for WorkBenchProApp {
         let mut delete_should_confirm = false;
 
         if self.show_delete_dialog {
-            let is_uploaded = self.delete_run_index
+            // Check if there's a cloud record (either local remote_id or found by matching)
+            let has_cloud_record = self.delete_run_index
                 .and_then(|idx| self.history_runs.get(idx))
-                .map(|r| r.uploaded_at.is_some())
-                .unwrap_or(false);
+                .map(|r| r.remote_id.is_some())
+                .unwrap_or(false)
+                || self.delete_found_remote_id.is_some();
 
             egui::Window::new("Delete Benchmark")
                 .collapsible(false)
@@ -815,30 +829,13 @@ impl eframe::App for WorkBenchProApp {
                         );
                         ui.add_space(8.0);
 
-                        if is_uploaded {
-                            ui.checkbox(
-                                &mut self.delete_also_cloud,
-                                "Also remove from community results",
-                            );
-
-                            if self.delete_also_cloud {
-                                ui.add_space(8.0);
-                                ui.label(
-                                    egui::RichText::new("Admin password required:")
-                                        .size(Theme::SIZE_CAPTION)
-                                        .color(Theme::TEXT_SECONDARY),
-                                );
-                                let response = ui.add(
-                                    egui::TextEdit::singleline(&mut self.delete_password)
-                                        .password(true)
-                                        .desired_width(300.0)
-                                        .hint_text("Admin password"),
-                                );
-
-                                if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
-                                    delete_should_confirm = true;
-                                }
-                            }
+                        if has_cloud_record {
+                            let label = if self.delete_found_remote_id.is_some() {
+                                "Also remove from community results (found matching upload)"
+                            } else {
+                                "Also remove from community results"
+                            };
+                            ui.checkbox(&mut self.delete_also_cloud, label);
                         }
 
                         if let Some(ref err) = self.delete_error {

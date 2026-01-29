@@ -268,6 +268,39 @@ impl CloudClient {
         Ok(())
     }
 
+    /// Find a matching benchmark run in the cloud by machine name and timestamp
+    /// Returns the remote_id if found, None otherwise
+    pub fn find_matching(&self, machine_name: &str, run_timestamp: &DateTime<Utc>) -> Result<Option<String>, CloudError> {
+        let timestamp_str = run_timestamp.to_rfc3339();
+        let url = format!(
+            "{}/rest/v1/benchmark_runs?select=id&machine_name=eq.{}&run_timestamp=eq.{}",
+            SUPABASE_URL,
+            urlencoding::encode(machine_name),
+            urlencoding::encode(&timestamp_str)
+        );
+
+        let response = self
+            .client
+            .get(&url)
+            .header("apikey", SUPABASE_ANON_KEY)
+            .header("Authorization", format!("Bearer {}", SUPABASE_ANON_KEY))
+            .send()?;
+
+        if !response.status().is_success() {
+            let status = response.status();
+            let body = response.text().unwrap_or_default();
+            return Err(CloudError::Server(format!("{}: {}", status, body)));
+        }
+
+        #[derive(Deserialize)]
+        struct IdOnly {
+            id: String,
+        }
+
+        let results: Vec<IdOnly> = response.json().map_err(|e| CloudError::Parse(e.to_string()))?;
+        Ok(results.first().map(|r| r.id.clone()))
+    }
+
     /// Upload a local benchmark run to the community database
     pub fn upload(&self, run: &BenchmarkRun, display_name: &str, user_name: Option<String>, description: Option<String>) -> Result<String, CloudError> {
         let url = format!("{}/rest/v1/benchmark_runs", SUPABASE_URL);
