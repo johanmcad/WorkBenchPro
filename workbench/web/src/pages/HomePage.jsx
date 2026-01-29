@@ -8,10 +8,12 @@ import {
   BarChart3,
   GitCompare,
   Globe,
-  CheckCircle,
   ArrowRight,
   Monitor,
   AlertCircle,
+  Activity,
+  Settings,
+  MemoryStick,
 } from 'lucide-react'
 import { fetchStats } from '../api'
 
@@ -55,27 +57,56 @@ export default function HomePage() {
     },
   ]
 
-  const benchmarks = [
-    'File Enumeration',
-    'Random Read',
-    'Metadata Operations',
-    'Directory Traversal',
-    'Large File Read',
-    'Single-Thread CPU',
-    'Multi-Thread CPU',
-    'Mixed Workload',
-    'Cargo Build',
-    'C# Compile',
-    'Archive Operations',
-    'PowerShell Scripts',
-    'Process Spawn',
-    'Thread Wake',
-    'Storage Latency',
-    'Memory Bandwidth',
-    'Memory Latency',
-    'Registry Operations',
-    'Windows Services',
-    'Network Tools',
+  const benchmarkGroups = [
+    {
+      category: 'Disk',
+      icon: HardDrive,
+      tests: [
+        { name: 'File Enumeration', description: 'Simulates VS solution load, git status - measures how fast your system can list files across directories.' },
+        { name: 'Random Read', description: 'Simulates loading source files - measures random 4KB read performance from storage.' },
+        { name: 'Large File Read', description: 'Simulates opening large CAD files - measures sequential read throughput.' },
+        { name: 'Metadata Operations', description: 'Simulates npm install, build temp files - measures file create/write/delete speed.' },
+        { name: 'Directory Traversal', description: 'Simulates search in files - measures enumeration + reading file contents.' },
+        { name: 'Storage Latency', description: 'Measures P50/P95/P99 read latency - critical for system responsiveness.' },
+      ],
+    },
+    {
+      category: 'CPU',
+      icon: Cpu,
+      tests: [
+        { name: 'Single-Thread', description: 'Simulates single-file compilation - measures single-core compute performance.' },
+        { name: 'Multi-Thread', description: 'Simulates parallel build - measures how well your CPU scales across all cores.' },
+        { name: 'Mixed Workload', description: 'Simulates full build cycle - combines file I/O with CPU compression work.' },
+      ],
+    },
+    {
+      category: 'Memory',
+      icon: MemoryStick,
+      tests: [
+        { name: 'Bandwidth', description: 'Multi-threaded memory copy - measures RAM throughput in GB/s.' },
+        { name: 'Latency', description: 'Pointer-chasing benchmark - measures memory access latency.' },
+      ],
+    },
+    {
+      category: 'Responsiveness',
+      icon: Activity,
+      tests: [
+        { name: 'Process Spawn', description: 'Simulates running build tools - measures how fast new processes can start.' },
+        { name: 'App Launch', description: 'Launches Notepad, WordPad, Calculator, and more - measures real application startup time.' },
+        { name: 'Thread Wake', description: 'Simulates async operations - measures thread synchronization latency.' },
+      ],
+    },
+    {
+      category: 'Windows & Apps',
+      icon: Settings,
+      tests: [
+        { name: 'PowerShell', description: 'Execute various PowerShell operations - measures script execution speed.' },
+        { name: 'Archive Ops', description: 'Compress and extract files using tar - measures archiving speed.' },
+        { name: 'Registry', description: 'Query Windows registry - measures registry read performance.' },
+        { name: 'Services', description: 'Query Windows services - measures system management overhead.' },
+        { name: 'Network', description: 'DNS resolution, adapter queries - measures network subsystem speed.' },
+      ],
+    },
   ]
 
   return (
@@ -148,10 +179,20 @@ export default function HomePage() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature, i) => (
-              <div key={i} className="card hover:border-wb-accent/50 transition-colors">
-                <feature.icon className="text-wb-accent-light mb-4" size={32} />
+              <div
+                key={i}
+                className="group relative rounded-2xl border border-wb-border bg-gradient-to-br from-wb-accent/10 to-transparent p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-wb-accent/50"
+              >
+                <div className="p-2 rounded-xl bg-wb-bg-card/80 backdrop-blur w-fit mb-4">
+                  <feature.icon className="text-wb-accent-light" size={24} />
+                </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                 <p className="text-wb-text-secondary">{feature.description}</p>
+                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+                  <div className="absolute -bottom-8 -right-8 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
+                    <feature.icon size={120} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -165,19 +206,49 @@ export default function HomePage() {
             <h2 className="text-3xl md:text-4xl font-bold mb-4">
               Comprehensive Test Suite
             </h2>
-            <p className="text-wb-text-secondary text-lg">
+            <p className="text-wb-text-secondary text-lg max-w-3xl mx-auto mb-4">
               Over 30 individual tests across multiple categories
+            </p>
+            <p className="text-wb-text-secondary max-w-2xl mx-auto">
+              <strong className="text-wb-accent-light">Not a synthetic benchmark.</strong>{' '}
+              Unlike traditional benchmarks that measure peak theoretical performance, WorkBench-Pro tests the operations you actually use every day—how fast your system <em>feels</em>, not just how fast it can run artificial loops.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {benchmarks.map((name, i) => (
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {benchmarkGroups.map((group, groupIdx) => (
               <div
-                key={i}
-                className="flex items-center gap-2 px-4 py-3 bg-wb-bg-card rounded-lg border border-wb-border"
+                key={groupIdx}
+                className="group relative rounded-2xl border border-wb-border bg-gradient-to-br from-wb-accent/10 to-transparent p-6 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl hover:border-wb-accent/50"
               >
-                <CheckCircle size={16} className="text-wb-success flex-shrink-0" />
-                <span className="text-sm truncate">{name}</span>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-xl bg-wb-bg-card/80 backdrop-blur">
+                    <group.icon size={24} className="text-wb-accent-light" />
+                  </div>
+                  <h3 className="text-lg font-bold">{group.category}</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {group.tests.map((benchmark, i) => (
+                    <div
+                      key={i}
+                      className="group/item relative"
+                    >
+                      <span className="inline-block px-3 py-1.5 text-sm bg-wb-bg-card/60 backdrop-blur-sm rounded-full border border-wb-border/50 hover:bg-wb-bg-card hover:border-wb-accent/50 transition-all duration-200 cursor-default">
+                        {benchmark.name}
+                      </span>
+                      <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-50 opacity-0 invisible group-hover/item:opacity-100 group-hover/item:visible transition-all duration-200 pointer-events-none">
+                        <div className="w-64 p-3 bg-wb-bg-card border border-wb-border rounded-lg shadow-xl">
+                          <p className="text-xs text-wb-text-secondary leading-relaxed">{benchmark.description}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="absolute inset-0 overflow-hidden pointer-events-none rounded-2xl">
+                  <div className="absolute -bottom-8 -right-8 opacity-5 group-hover:opacity-10 transition-opacity duration-300">
+                    <group.icon size={120} />
+                  </div>
+                </div>
               </div>
             ))}
           </div>
