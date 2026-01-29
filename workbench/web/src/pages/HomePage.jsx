@@ -11,6 +11,7 @@ import {
   CheckCircle,
   ArrowRight,
   Monitor,
+  AlertCircle,
 } from 'lucide-react'
 import { fetchStats } from '../api'
 
@@ -222,6 +223,29 @@ export default function HomePage() {
                 <li>4 GB RAM minimum (8+ GB recommended)</li>
                 <li>~100 MB disk space for tests</li>
               </ul>
+            </div>
+
+            <div className="mt-6 pt-6 border-t border-wb-border">
+              <div className="flex items-start gap-3 text-left bg-wb-bg-secondary/50 rounded-lg p-4">
+                <AlertCircle size={20} className="text-wb-accent-light flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="font-semibold text-sm mb-2">First time running?</h4>
+                  <p className="text-wb-text-secondary text-sm mb-2">
+                    After downloading, you may need to unblock the file:
+                  </p>
+                  <ol className="text-wb-text-secondary text-sm space-y-1 list-decimal list-inside">
+                    <li>Right-click <code className="bg-wb-bg-card px-1 rounded">workbench-pro.exe</code></li>
+                    <li>Select <strong className="text-wb-text-primary">Properties</strong></li>
+                    <li>Check <strong className="text-wb-text-primary">Unblock</strong> at the bottom</li>
+                    <li>Click <strong className="text-wb-text-primary">OK</strong></li>
+                  </ol>
+                  <ul className="text-wb-text-secondary text-xs mt-3 space-y-1">
+                    <li><strong className="text-wb-text-primary">Portable:</strong> No installation or admin access required</li>
+                    <li><strong className="text-wb-text-primary">Privacy:</strong> No files saved to your computer, no personal data collected</li>
+                    <li><strong className="text-wb-text-primary">Open source:</strong> Full source code available on GitHub</li>
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
