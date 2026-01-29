@@ -160,3 +160,23 @@ export async function fetchLatestRelease() {
     return null
   }
 }
+
+// Submit contact form
+export async function submitContactForm({ name, email, message }) {
+  const url = `${SUPABASE_URL}/rest/v1/contact_submissions`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      name,
+      email,
+      message,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to submit contact form: ${response.status}`)
+  }
+
+  return response.json()
+}
