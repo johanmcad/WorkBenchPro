@@ -250,7 +250,7 @@ impl HistoryView {
                                             RichText::new("View Online")
                                                 .size(Theme::SIZE_CAPTION)
                                                 .color(Theme::ACCENT),
-                                            "https://workbench-pro-iota.vercel.app/results",
+                                            "https://www.workbench-pro.com/results",
                                         );
 
                                         ui.add_space(4.0);

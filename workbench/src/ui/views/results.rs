@@ -288,7 +288,7 @@ impl ResultsView {
                             RichText::new("View Online")
                                 .size(Theme::SIZE_BODY)
                                 .color(Theme::ACCENT),
-                            "https://workbench-pro-iota.vercel.app/results",
+                            "https://www.workbench-pro.com/results",
                         );
                     }
                 });

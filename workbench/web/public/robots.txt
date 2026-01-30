@@ -3,4 +3,4 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://workbench-pro-iota.vercel.app/sitemap.xml
+Sitemap: https://www.workbench-pro.com/sitemap.xml

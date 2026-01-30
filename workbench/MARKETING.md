@@ -2,7 +2,7 @@
 
 ## Quick Links
 - **Download**: https://github.com/johanmcad/WorkBenchPro/releases
-- **Results Browser**: https://workbench-pro-iota.vercel.app/results
+- **Results Browser**: https://www.workbench-pro.com/results
 - **GitHub**: https://github.com/johanmcad/WorkBenchPro
 
 ---
@@ -48,7 +48,7 @@ I got frustrated that benchmarks like Cinebench and CrystalDiskMark don't measur
 - Free & open source (Rust + React)
 
 Download: https://github.com/johanmcad/WorkBenchPro/releases
-Results browser: https://workbench-pro-iota.vercel.app/results
+Results browser: https://www.workbench-pro.com/results
 
 Would love feedback on what tests to add. What operations slow you down the most?
 ```
@@ -71,7 +71,7 @@ Built a benchmark specifically for Windows developer workstations. Unlike synthe
 Results are compared against the community so you can see how your machine stacks up.
 
 Download: https://github.com/johanmcad/WorkBenchPro/releases
-Browse results: https://workbench-pro-iota.vercel.app/results
+Browse results: https://www.workbench-pro.com/results
 
 Free and open source. Would love to hear what Windows-specific tests would be useful!
 ```
@@ -97,7 +97,7 @@ After collecting community results, found some interesting things:
 - Thread wake latency varies a lot between CPUs
 
 Try it: https://github.com/johanmcad/WorkBenchPro/releases
-Compare: https://workbench-pro-iota.vercel.app/results
+Compare: https://www.workbench-pro.com/results
 ```
 
 **Posting strategy**: Space posts 2-3 days apart to avoid looking spammy.
@@ -151,7 +151,7 @@ After collecting community results, I found:
 ## Try It Yourself
 
 - **Download**: [GitHub Releases](https://github.com/johanmcad/WorkBenchPro/releases)
-- **Compare Results**: [Community Browser](https://workbench-pro-iota.vercel.app/results)
+- **Compare Results**: [Community Browser](https://www.workbench-pro.com/results)
 
 It's free and open source. I'd love to hear what tests you'd find useful!
 
@@ -177,7 +177,7 @@ Unlike Cinebench or CrystalDiskMark, it tests real operations like enumerating 3
 Built with Rust (desktop app) and React (results browser). Free and open source.
 
 Download: https://github.com/johanmcad/WorkBenchPro/releases
-Compare results: https://workbench-pro-iota.vercel.app/results
+Compare results: https://www.workbench-pro.com/results
 ```
 
 **Best times to post**: Weekday mornings (US time), Tuesday-Thursday
@@ -280,7 +280,7 @@ Built with Rust for the desktop app and React for the web results browser.
 - Monitor search queries that find your site
 
 ### Check Indexing
-Search on Google: `site:workbench-pro-iota.vercel.app`
+Search on Google: `site:www.workbench-pro.com`
 
 ### Optional: Add Analytics
 - Vercel Analytics (built-in, paid)
