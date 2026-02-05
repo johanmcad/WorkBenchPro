@@ -160,7 +160,7 @@ export default function HomePage() {
                 <img
                   src="/project-operations.png"
                   alt="Project Operations - file enumeration, random reads, git operations"
-                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-150 group-hover:shadow-2xl"
                 />
               </div>
               <div className="mt-4 px-1">
@@ -180,7 +180,7 @@ export default function HomePage() {
                 <img
                   src="/build-performance.png"
                   alt="Build Performance - single-thread, multi-thread, native compiler"
-                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-150 group-hover:shadow-2xl"
                 />
               </div>
               <div className="mt-4 px-1">
@@ -200,7 +200,7 @@ export default function HomePage() {
                 <img
                   src="/responsiveness.png"
                   alt="Responsiveness - storage latency, process spawn, memory bandwidth"
-                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-150 group-hover:shadow-2xl"
                 />
               </div>
               <div className="mt-4 px-1">
@@ -220,7 +220,7 @@ export default function HomePage() {
                 <img
                   src="/windows-system-tools.png"
                   alt="Windows System Tools - registry, services, app launch, network"
-                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-150 group-hover:shadow-2xl"
                 />
               </div>
               <div className="mt-4 px-1">
