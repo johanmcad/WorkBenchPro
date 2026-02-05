@@ -140,6 +140,103 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* App Preview Section */}
+      <section className="py-16 md:py-24">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold mb-3">
+              What Gets Tested
+            </h2>
+            <p className="text-wb-text-secondary max-w-xl mx-auto">
+              Four categories that measure what actually matters for productivity.
+            </p>
+          </div>
+
+          {/* 2x2 Grid of category screenshots */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            {/* Project Operations */}
+            <div className="group flex flex-col">
+              <div className="relative rounded-xl overflow-visible border border-wb-border shadow-lg transition-all duration-500 ease-out hover:z-50 cursor-zoom-in">
+                <img
+                  src="/project-operations.png"
+                  alt="Project Operations - file enumeration, random reads, git operations"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                />
+              </div>
+              <div className="mt-4 px-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <HardDrive size={20} className="text-wb-accent-light" />
+                  <h3 className="font-semibold text-lg">Project Operations</h3>
+                </div>
+                <p className="text-wb-text-secondary text-sm">
+                  File enumeration, random reads, git operations, and search that affect IDE loading.
+                </p>
+              </div>
+            </div>
+
+            {/* Build Performance */}
+            <div className="group flex flex-col">
+              <div className="relative rounded-xl overflow-visible border border-wb-border shadow-lg transition-all duration-500 ease-out hover:z-50 cursor-zoom-in">
+                <img
+                  src="/build-performance.png"
+                  alt="Build Performance - single-thread, multi-thread, native compiler"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                />
+              </div>
+              <div className="mt-4 px-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Cpu size={20} className="text-wb-accent-light" />
+                  <h3 className="font-semibold text-lg">Build Performance</h3>
+                </div>
+                <p className="text-wb-text-secondary text-sm">
+                  Single-thread, multi-thread CPU, native compiler, and archive operations.
+                </p>
+              </div>
+            </div>
+
+            {/* Responsiveness */}
+            <div className="group flex flex-col">
+              <div className="relative rounded-xl overflow-visible border border-wb-border shadow-lg transition-all duration-500 ease-out hover:z-50 cursor-zoom-in">
+                <img
+                  src="/responsiveness.png"
+                  alt="Responsiveness - storage latency, process spawn, memory bandwidth"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                />
+              </div>
+              <div className="mt-4 px-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Activity size={20} className="text-wb-accent-light" />
+                  <h3 className="font-semibold text-lg">Responsiveness</h3>
+                </div>
+                <p className="text-wb-text-secondary text-sm">
+                  Storage latency, process spawn, thread wake, and memory bandwidth.
+                </p>
+              </div>
+            </div>
+
+            {/* Windows System Tools */}
+            <div className="group flex flex-col">
+              <div className="relative rounded-xl overflow-visible border border-wb-border shadow-lg transition-all duration-500 ease-out hover:z-50 cursor-zoom-in">
+                <img
+                  src="/windows-system-tools.png"
+                  alt="Windows System Tools - registry, services, app launch, network"
+                  className="w-full h-auto rounded-xl transition-transform duration-500 ease-out group-hover:scale-[2] group-hover:shadow-2xl"
+                />
+              </div>
+              <div className="mt-4 px-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <Settings size={20} className="text-wb-accent-light" />
+                  <h3 className="font-semibold text-lg">Windows System Tools</h3>
+                </div>
+                <p className="text-wb-text-secondary text-sm">
+                  Registry, app launch, services, network, and system queries.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Stats Section */}
       <section className="border-y border-wb-border bg-wb-bg-card/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
