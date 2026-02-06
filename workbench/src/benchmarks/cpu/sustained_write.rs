@@ -3,7 +3,6 @@ use std::io::Write;
 use std::path::PathBuf;
 
 use anyhow::Result;
-use rand::Rng;
 
 use crate::benchmarks::{Benchmark, BenchmarkConfig, Category, ProgressCallback};
 use crate::core::Timer;
@@ -64,12 +63,37 @@ impl Benchmark for SustainedWriteBenchmark {
         let fsync_interval = 64; // fsync every 64 chunks (256MB)
         let num_chunks = (total_size / chunk_size as u64) as usize;
 
+        #[cfg(feature = "debug-logging")]
+        tracing::info!(
+            "SustainedWrite config: total_size={}GB, chunk_size={}MB, num_chunks={}, iterations={}",
+            config.cpu_sustained_write_gb,
+            chunk_size / (1024 * 1024),
+            num_chunks,
+            config.iterations
+        );
+
         progress.update(0.0, "Preparing write buffer...");
 
-        // Generate random data
-        let mut rng = rand::thread_rng();
+        // Generate structured/compressible data pattern instead of random bytes
+        // This avoids triggering AV heuristics that flag random binary data
         let mut buffer = vec![0u8; chunk_size];
-        rng.fill(&mut buffer[..]);
+        for (i, chunk) in buffer.chunks_mut(256).enumerate() {
+            // Create a repeating pattern with some variation
+            // Mimics build output: text-like data with structure
+            for (j, byte) in chunk.iter_mut().enumerate() {
+                *byte = match j % 8 {
+                    0 => b'B',                         // Build
+                    1 => b'U',
+                    2 => b'I',
+                    3 => b'L',
+                    4 => b'D',
+                    5 => ((i % 10) as u8) + b'0',     // Counter digit
+                    6 => b'\r',
+                    7 => b'\n',
+                    _ => b' ',
+                };
+            }
+        }
 
         progress.update(0.05, "Starting sustained write...");
 
@@ -125,6 +149,15 @@ impl Benchmark for SustainedWriteBenchmark {
             let elapsed = timer.elapsed_secs();
             let mb_per_sec = (bytes_written as f64 / (1024.0 * 1024.0)) / elapsed;
             throughputs.push(mb_per_sec);
+
+            #[cfg(feature = "debug-logging")]
+            tracing::info!(
+                "SustainedWrite run {} complete: {}MB written in {:.2}s = {:.1} MB/s",
+                run + 1,
+                bytes_written / (1024 * 1024),
+                elapsed,
+                mb_per_sec
+            );
         }
 
         // Cleanup

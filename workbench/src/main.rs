@@ -13,6 +13,9 @@ use eframe::egui;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+#[cfg(feature = "debug-logging")]
+use tracing_subscriber::prelude::*;
+
 // Embed the icon PNG for window icon
 static ICON_PNG: &[u8] = include_bytes!("../assets/icon.png");
 
@@ -80,7 +83,41 @@ fn load_icon() -> Option<egui::IconData> {
     })
 }
 
+/// Initialize debug file logging to %TEMP%\workbench_pro_logs
+#[cfg(feature = "debug-logging")]
+fn setup_debug_logging() -> tracing_appender::non_blocking::WorkerGuard {
+    let log_dir = std::env::temp_dir().join("workbench_pro_logs");
+    std::fs::create_dir_all(&log_dir).ok();
+
+    let file_appender = tracing_appender::rolling::never(&log_dir, "workbench_debug.log");
+    let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_writer(non_blocking)
+                .with_ansi(false)
+                .with_target(true)
+                .with_level(true)
+                .with_thread_ids(true)
+                .with_file(true)
+                .with_line_number(true)
+        )
+        .with(tracing_subscriber::filter::LevelFilter::DEBUG)
+        .init();
+
+    tracing::info!("=== WorkBench-Pro Debug Logging Started ===");
+    tracing::info!("Log file: {}", log_dir.join("workbench_debug.log").display());
+    tracing::info!("Timestamp: {}", chrono::Local::now().format("%Y-%m-%d %H:%M:%S"));
+
+    guard
+}
+
 fn main() -> Result<()> {
+    // Initialize debug logging if feature is enabled
+    #[cfg(feature = "debug-logging")]
+    let _log_guard = setup_debug_logging();
+
     // Extract and configure SwiftShader for software rendering
     setup_swiftshader();
 

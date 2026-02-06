@@ -9,12 +9,17 @@ pub enum HomeAction {
     None,
     Run,
     History,
+    /// Run a single test by index (debug feature only)
+    #[cfg(feature = "debug-logging")]
+    RunSingleTest(usize),
 }
 
 /// Test specification for display
 struct TestSpec {
     name: &'static str,
+    #[allow(dead_code)]
     what_it_does: &'static str,
+    #[allow(dead_code)]
     how_it_works: &'static str,
     measures: &'static str,
     relevance: &'static str,
@@ -60,13 +65,6 @@ impl TestSpecs {
                 how_it_works: "Creates a 2GB file with random data, then reads it sequentially in 1MB chunks. Performed 3 times after a warmup run.",
                 measures: "MB/s throughput",
                 relevance: "Affects opening large CAD files, video editing, database operations",
-            },
-            TestSpec {
-                name: "Git Operations",
-                what_it_does: "Tests real git command performance.",
-                how_it_works: "Creates a git repository with 5,000 files across 50 directories, commits them, then benchmarks: git status (10x), git diff (10x), git log (10x), git add (5x).",
-                measures: "Average operation time in ms",
-                relevance: "Directly measures developer workflow with version control",
             },
             TestSpec {
                 name: "Robocopy File Copy",
@@ -123,18 +121,18 @@ impl TestSpecs {
                 relevance: "Affects build artifact generation, log writing, database commits",
             },
             TestSpec {
-                name: "Native Compiler",
-                what_it_does: "Tests Windows native C# compilation performance.",
-                how_it_works: "Generates 5 C# source files with classes, generics, and 30+ math functions, then compiles with csc.exe /optimize+. Repeated 5 times.",
-                measures: "Average compile time in seconds",
-                relevance: "Measures build performance using Windows built-in compiler",
-            },
-            TestSpec {
                 name: "Archive Operations",
                 what_it_does: "Tests archive compression and extraction speed.",
                 how_it_works: "Creates 250 text files across 16 directories, then compresses with tar -czf and extracts with tar -xzf. Repeated 3 times each.",
                 measures: "Total time in seconds",
                 relevance: "Affects npm install, artifact packaging, backup operations",
+            },
+            TestSpec {
+                name: "Windows Compression",
+                what_it_does: "Tests Windows native compression API performance.",
+                how_it_works: "Uses Windows compression APIs to compress and decompress data buffers. Measures throughput.",
+                measures: "MB/s throughput",
+                relevance: "Affects ZIP operations, NTFS compression, Windows backup",
             },
             TestSpec {
                 name: "PowerShell Scripts",
@@ -224,13 +222,6 @@ impl TestSpecs {
                 relevance: "Affects services.msc, system administration, monitoring tools",
             },
             TestSpec {
-                name: "Network Info",
-                what_it_does: "Tests network configuration query speed.",
-                how_it_works: "Queries network adapters, IP configuration, routing tables, and DNS settings using Windows networking APIs.",
-                measures: "Query time in ms",
-                relevance: "Affects network troubleshooting tools, VPN clients, system info",
-            },
-            TestSpec {
                 name: "WMI Query",
                 what_it_does: "Tests Windows Management Instrumentation performance.",
                 how_it_works: "Executes WMI queries via wmic.exe for system information: OS details, CPU info, disk drives, memory. Measures query response time.",
@@ -276,6 +267,7 @@ impl HomeView {
     pub fn show(
         ui: &mut Ui,
         system_info: &SystemInfo,
+        safe_mode: &mut bool,
     ) -> HomeAction {
         let mut action = HomeAction::None;
 
@@ -366,6 +358,31 @@ impl HomeView {
                 if ui.add(history_button).clicked() {
                     action = HomeAction::History;
                 }
+
+                ui.add_space(20.0);
+
+                // Safe mode toggle button
+                let safe_mode_btn = if *safe_mode {
+                    egui::Button::new(
+                        RichText::new("☑ Safe Mode")
+                            .size(Theme::SIZE_CAPTION)
+                            .color(egui::Color32::WHITE),
+                    )
+                    .fill(Theme::WARNING)
+                    .rounding(4.0)
+                } else {
+                    egui::Button::new(
+                        RichText::new("☐ Safe Mode")
+                            .size(Theme::SIZE_CAPTION),
+                    )
+                    .rounding(4.0)
+                };
+                if ui.add(safe_mode_btn)
+                    .on_hover_text("Skip tests that may trigger antivirus (PowerShell, Archive Ops, File Enumeration)")
+                    .clicked()
+                {
+                    *safe_mode = !*safe_mode;
+                }
             });
 
             // Test Specifications Card - compact
@@ -384,54 +401,87 @@ impl HomeView {
                         );
                         ui.separator();
                         ui.label(
-                            RichText::new("31 tests")
+                            RichText::new("29 tests")
                                 .size(Theme::SIZE_CAPTION)
                                 .color(Theme::TEXT_SECONDARY),
                         );
                     });
 
+                    // Test indices in the benchmark list:
+                    // 0-7: Project Operations (8 tests - git_ops removed)
+                    // 8-15: Build Performance (8 tests)
+                    // 16-20: Responsiveness (5 tests)
+                    // 21-30: System Tools (10 tests)
+                    let project_ops = TestSpecs::project_operations();
+                    let build_perf = TestSpecs::build_performance();
+                    let responsiveness = TestSpecs::responsiveness();
+                    let system_tools = TestSpecs::system_tools();
+
                     // Project Operations
                     CollapsingHeader::new(
-                        RichText::new("Project Operations (9)")
+                        RichText::new(format!("Project Operations ({})", project_ops.len()))
                             .size(Theme::SIZE_CAPTION)
                             .color(Theme::ACCENT),
                     )
                     .default_open(false)
                     .show(ui, |ui| {
-                        Self::show_test_list(ui, "project_ops", &TestSpecs::project_operations());
+                        #[cfg(feature = "debug-logging")]
+                        if let Some(idx) = Self::show_test_list_debug(ui, "project_ops", &project_ops, 0) {
+                            action = HomeAction::RunSingleTest(idx);
+                        }
+                        #[cfg(not(feature = "debug-logging"))]
+                        Self::show_test_list(ui, "project_ops", &project_ops);
                     });
 
+                    let build_start = project_ops.len();
                     // Build Performance
                     CollapsingHeader::new(
-                        RichText::new("Build Performance (7)")
+                        RichText::new(format!("Build Performance ({})", build_perf.len()))
                             .size(Theme::SIZE_CAPTION)
                             .color(Theme::ACCENT),
                     )
                     .default_open(false)
                     .show(ui, |ui| {
-                        Self::show_test_list(ui, "build_perf", &TestSpecs::build_performance());
+                        #[cfg(feature = "debug-logging")]
+                        if let Some(idx) = Self::show_test_list_debug(ui, "build_perf", &build_perf, build_start) {
+                            action = HomeAction::RunSingleTest(idx);
+                        }
+                        #[cfg(not(feature = "debug-logging"))]
+                        Self::show_test_list(ui, "build_perf", &build_perf);
                     });
 
+                    let resp_start = build_start + build_perf.len();
                     // Responsiveness
                     CollapsingHeader::new(
-                        RichText::new("Responsiveness (5)")
+                        RichText::new(format!("Responsiveness ({})", responsiveness.len()))
                             .size(Theme::SIZE_CAPTION)
                             .color(Theme::ACCENT),
                     )
                     .default_open(false)
                     .show(ui, |ui| {
-                        Self::show_test_list(ui, "responsiveness", &TestSpecs::responsiveness());
+                        #[cfg(feature = "debug-logging")]
+                        if let Some(idx) = Self::show_test_list_debug(ui, "responsiveness", &responsiveness, resp_start) {
+                            action = HomeAction::RunSingleTest(idx);
+                        }
+                        #[cfg(not(feature = "debug-logging"))]
+                        Self::show_test_list(ui, "responsiveness", &responsiveness);
                     });
 
+                    let tools_start = resp_start + responsiveness.len();
                     // System Tools
                     CollapsingHeader::new(
-                        RichText::new("Windows System Tools (10)")
+                        RichText::new(format!("Windows System Tools ({})", system_tools.len()))
                             .size(Theme::SIZE_CAPTION)
                             .color(Theme::ACCENT),
                     )
                     .default_open(false)
                     .show(ui, |ui| {
-                        Self::show_test_list(ui, "system_tools", &TestSpecs::system_tools());
+                        #[cfg(feature = "debug-logging")]
+                        if let Some(idx) = Self::show_test_list_debug(ui, "system_tools", &system_tools, tools_start) {
+                            action = HomeAction::RunSingleTest(idx);
+                        }
+                        #[cfg(not(feature = "debug-logging"))]
+                        Self::show_test_list(ui, "system_tools", &system_tools);
                     });
                 });
 
@@ -481,6 +531,7 @@ impl HomeView {
         action
     }
 
+    #[cfg(not(feature = "debug-logging"))]
     fn show_test_list(ui: &mut Ui, id: &str, tests: &[TestSpec]) {
         egui::Grid::new(format!("test_list_{}", id))
             .num_columns(3)
@@ -500,5 +551,49 @@ impl HomeView {
                     ui.end_row();
                 }
             });
+    }
+
+    /// Debug version with run buttons for each test
+    #[cfg(feature = "debug-logging")]
+    fn show_test_list_debug(ui: &mut Ui, id: &str, tests: &[TestSpec], start_index: usize) -> Option<usize> {
+        let mut clicked_index: Option<usize> = None;
+
+        egui::Grid::new(format!("test_list_{}", id))
+            .num_columns(4)
+            .spacing([12.0, 2.0])
+            .striped(true)
+            .show(ui, |ui| {
+                // Header
+                ui.label(RichText::new("#").size(Theme::SIZE_CAPTION).strong().color(Theme::TEXT_SECONDARY));
+                ui.label(RichText::new("Test").size(Theme::SIZE_CAPTION).strong().color(Theme::TEXT_SECONDARY));
+                ui.label(RichText::new("Measures").size(Theme::SIZE_CAPTION).strong().color(Theme::TEXT_SECONDARY));
+                ui.label(RichText::new("").size(Theme::SIZE_CAPTION)); // Run button column
+                ui.end_row();
+
+                for (i, test) in tests.iter().enumerate() {
+                    let test_index = start_index + i;
+
+                    ui.label(RichText::new(format!("{}", test_index + 1)).size(Theme::SIZE_CAPTION).color(Theme::TEXT_SECONDARY));
+                    ui.label(RichText::new(test.name).size(Theme::SIZE_CAPTION).color(Theme::TEXT_PRIMARY));
+                    ui.label(RichText::new(test.measures).size(Theme::SIZE_CAPTION).color(Theme::ACCENT));
+
+                    let run_button = egui::Button::new(
+                        RichText::new("Run")
+                            .size(Theme::SIZE_CAPTION)
+                            .color(egui::Color32::WHITE),
+                    )
+                    .min_size(egui::vec2(40.0, 18.0))
+                    .fill(Theme::ACCENT)
+                    .rounding(3.0);
+
+                    if ui.add(run_button).clicked() {
+                        clicked_index = Some(test_index);
+                    }
+
+                    ui.end_row();
+                }
+            });
+
+        clicked_index
     }
 }

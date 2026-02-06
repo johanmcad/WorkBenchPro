@@ -4,7 +4,7 @@ use eframe::egui;
 use sha2::{Sha256, Digest};
 
 use crate::benchmarks::apps::{
-    AppLaunchBenchmark, ArchiveOpsBenchmark, CSharpCompileBenchmark, DefenderImpactBenchmark,
+    AppLaunchBenchmark, ArchiveOpsBenchmark, DefenderImpactBenchmark,
     EnvironmentBenchmark, EventLogBenchmark, PowerShellBenchmark,
     ProcessesBenchmark, RegistryBenchmark, RobocopyBenchmark, ServicesBenchmark, SymlinkBenchmark,
     TaskSchedulerBenchmark, WindowsCompressionBenchmark, WindowsSearchBenchmark, WmicBenchmark,
@@ -13,11 +13,11 @@ use crate::benchmarks::cpu::{
     MixedWorkloadBenchmark, MultiThreadBenchmark, SingleThreadBenchmark, SustainedWriteBenchmark,
 };
 use crate::benchmarks::disk::{
-    FileEnumerationBenchmark, LargeFileReadBenchmark, MetadataOpsBenchmark, RandomReadBenchmark,
-    TraversalBenchmark,
+    FileEnumerationBenchmark, LargeFileReadBenchmark, LargeFileReadLiteBenchmark,
+    MetadataOpsBenchmark, RandomReadBenchmark, RandomReadLiteBenchmark, TraversalBenchmark,
 };
 use crate::benchmarks::latency::{
-    ProcessSpawnBenchmark, StorageLatencyBenchmark, ThreadWakeBenchmark,
+    ProcessSpawnBenchmark, StorageLatencyBenchmark, StorageLatencyLiteBenchmark, ThreadWakeBenchmark,
 };
 use crate::benchmarks::memory::{MemoryBandwidthBenchmark, MemoryLatencyBenchmark};
 use crate::benchmarks::Benchmark;
@@ -114,6 +114,9 @@ pub struct WorkBenchProApp {
 
     // Save error (for debugging)
     last_save_error: Option<String>,
+
+    // Safe mode - skip AV-sensitive tests
+    safe_mode: bool,
 }
 
 impl WorkBenchProApp {
@@ -176,6 +179,9 @@ impl WorkBenchProApp {
 
             // Save error
             last_save_error: None,
+
+            // Safe mode disabled by default
+            safe_mode: false,
         }
     }
 
@@ -207,42 +213,67 @@ impl WorkBenchProApp {
 
     fn start_benchmark(&mut self) {
         // Create benchmark instances
-        let benchmarks: Vec<Box<dyn Benchmark>> = vec![
-            // Project Operations (disk + file operations)
-            Box::new(FileEnumerationBenchmark::new()),
-            Box::new(RandomReadBenchmark::new()),
-            Box::new(MetadataOpsBenchmark::new()),
-            Box::new(TraversalBenchmark::new()),
-            Box::new(LargeFileReadBenchmark::new()),
-            Box::new(RobocopyBenchmark::new()),
-            Box::new(WindowsSearchBenchmark::new()),
-            Box::new(DefenderImpactBenchmark::new()),
-            // Build Performance (CPU + real app benchmarks)
-            Box::new(SingleThreadBenchmark::new()),
-            Box::new(MultiThreadBenchmark::new()),
-            Box::new(MixedWorkloadBenchmark::new()),
-            Box::new(SustainedWriteBenchmark::new()),
-            Box::new(CSharpCompileBenchmark::new()),
-            Box::new(ArchiveOpsBenchmark::new()),
-            Box::new(WindowsCompressionBenchmark::new()),
-            Box::new(PowerShellBenchmark::new()),
-            // Responsiveness (latency + memory benchmarks)
-            Box::new(StorageLatencyBenchmark::new()),
-            Box::new(ProcessSpawnBenchmark::new()),
-            Box::new(ThreadWakeBenchmark::new()),
-            Box::new(MemoryLatencyBenchmark::new()),
-            Box::new(MemoryBandwidthBenchmark::new()),
-            // Windows System Tools
-            Box::new(RegistryBenchmark::new()),
-            Box::new(EventLogBenchmark::new()),
-            Box::new(TaskSchedulerBenchmark::new()),
-            Box::new(AppLaunchBenchmark::new()),
-            Box::new(ServicesBenchmark::new()),
-            Box::new(WmicBenchmark::new()),
-            Box::new(ProcessesBenchmark::new()),
-            Box::new(SymlinkBenchmark::new()),
-            Box::new(EnvironmentBenchmark::new()),
-        ];
+        // In safe mode, skip tests that may trigger antivirus behavioral detection:
+        // - FileEnumeration (creates 30,000 files)
+        // - ArchiveOps (creates files + tar compression)
+        // - PowerShell (executes scripts)
+        let mut benchmarks: Vec<Box<dyn Benchmark>> = vec![];
+
+        // Project Operations (disk + file operations)
+        if !self.safe_mode {
+            benchmarks.push(Box::new(FileEnumerationBenchmark::new()));
+        }
+        // Use Lite variants in safe mode (smaller files, different test IDs for DB tracking)
+        if self.safe_mode {
+            benchmarks.push(Box::new(RandomReadLiteBenchmark::new()));
+        } else {
+            benchmarks.push(Box::new(RandomReadBenchmark::new()));
+        }
+        benchmarks.push(Box::new(MetadataOpsBenchmark::new()));
+        benchmarks.push(Box::new(TraversalBenchmark::new()));
+        if self.safe_mode {
+            benchmarks.push(Box::new(LargeFileReadLiteBenchmark::new()));
+        } else {
+            benchmarks.push(Box::new(LargeFileReadBenchmark::new()));
+        }
+        benchmarks.push(Box::new(RobocopyBenchmark::new()));
+        benchmarks.push(Box::new(WindowsSearchBenchmark::new()));
+        benchmarks.push(Box::new(DefenderImpactBenchmark::new()));
+
+        // Build Performance (CPU + real app benchmarks)
+        benchmarks.push(Box::new(SingleThreadBenchmark::new()));
+        benchmarks.push(Box::new(MultiThreadBenchmark::new()));
+        benchmarks.push(Box::new(MixedWorkloadBenchmark::new()));
+        benchmarks.push(Box::new(SustainedWriteBenchmark::new()));
+        if !self.safe_mode {
+            benchmarks.push(Box::new(ArchiveOpsBenchmark::new()));
+        }
+        benchmarks.push(Box::new(WindowsCompressionBenchmark::new()));
+        if !self.safe_mode {
+            benchmarks.push(Box::new(PowerShellBenchmark::new()));
+        }
+
+        // Responsiveness (latency + memory benchmarks)
+        if self.safe_mode {
+            benchmarks.push(Box::new(StorageLatencyLiteBenchmark::new()));
+        } else {
+            benchmarks.push(Box::new(StorageLatencyBenchmark::new()));
+        }
+        benchmarks.push(Box::new(ProcessSpawnBenchmark::new()));
+        benchmarks.push(Box::new(ThreadWakeBenchmark::new()));
+        benchmarks.push(Box::new(MemoryLatencyBenchmark::new()));
+        benchmarks.push(Box::new(MemoryBandwidthBenchmark::new()));
+
+        // Windows System Tools
+        benchmarks.push(Box::new(RegistryBenchmark::new()));
+        benchmarks.push(Box::new(EventLogBenchmark::new()));
+        benchmarks.push(Box::new(TaskSchedulerBenchmark::new()));
+        benchmarks.push(Box::new(AppLaunchBenchmark::new()));
+        benchmarks.push(Box::new(ServicesBenchmark::new()));
+        benchmarks.push(Box::new(WmicBenchmark::new()));
+        benchmarks.push(Box::new(ProcessesBenchmark::new()));
+        benchmarks.push(Box::new(SymlinkBenchmark::new()));
+        benchmarks.push(Box::new(EnvironmentBenchmark::new()));
 
         // Reset running state
         self.overall_progress = 0.0;
@@ -263,6 +294,71 @@ impl WorkBenchProApp {
         self.receiver = None;
         // Reset window size
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 400.0)));
+    }
+
+    /// Start a single benchmark by index (debug feature)
+    #[cfg(feature = "debug-logging")]
+    fn start_single_benchmark(&mut self, index: usize) {
+        // Create all benchmarks in order (must match the order in home.rs TestSpecs)
+        let all_benchmarks: Vec<Box<dyn Benchmark>> = vec![
+            // Project Operations (0-7)
+            Box::new(FileEnumerationBenchmark::new()),   // 0
+            Box::new(RandomReadBenchmark::new()),        // 1
+            Box::new(MetadataOpsBenchmark::new()),       // 2
+            Box::new(TraversalBenchmark::new()),         // 3
+            Box::new(LargeFileReadBenchmark::new()),     // 4
+            Box::new(RobocopyBenchmark::new()),          // 5
+            Box::new(WindowsSearchBenchmark::new()),     // 6
+            Box::new(DefenderImpactBenchmark::new()),    // 7
+            // Build Performance (8-14)
+            Box::new(SingleThreadBenchmark::new()),      // 8
+            Box::new(MultiThreadBenchmark::new()),       // 9
+            Box::new(MixedWorkloadBenchmark::new()),     // 10
+            Box::new(SustainedWriteBenchmark::new()),    // 11
+            Box::new(ArchiveOpsBenchmark::new()),        // 12
+            Box::new(WindowsCompressionBenchmark::new()),// 13
+            Box::new(PowerShellBenchmark::new()),        // 14
+            // Responsiveness (15-19)
+            Box::new(StorageLatencyBenchmark::new()),    // 15
+            Box::new(ProcessSpawnBenchmark::new()),      // 16
+            Box::new(ThreadWakeBenchmark::new()),        // 17
+            Box::new(MemoryLatencyBenchmark::new()),     // 18
+            Box::new(MemoryBandwidthBenchmark::new()),   // 19
+            // Windows System Tools (20-28)
+            Box::new(RegistryBenchmark::new()),          // 20
+            Box::new(EventLogBenchmark::new()),          // 21
+            Box::new(TaskSchedulerBenchmark::new()),     // 22
+            Box::new(AppLaunchBenchmark::new()),         // 23
+            Box::new(ServicesBenchmark::new()),          // 24
+            Box::new(WmicBenchmark::new()),              // 25
+            Box::new(ProcessesBenchmark::new()),         // 26
+            Box::new(SymlinkBenchmark::new()),           // 27
+            Box::new(EnvironmentBenchmark::new()),       // 28
+        ];
+
+        // Get the single benchmark at the requested index
+        if index >= all_benchmarks.len() {
+            tracing::error!("Invalid benchmark index: {}", index);
+            return;
+        }
+
+        // Take just the one benchmark we want
+        let benchmark = all_benchmarks.into_iter().nth(index).unwrap();
+        let benchmark_name = benchmark.name().to_string();
+
+        tracing::info!("Starting single benchmark test: [{}] {}", index, benchmark_name);
+
+        // Reset running state
+        self.overall_progress = 0.0;
+        self.current_test_progress = 0.0;
+        self.current_test = String::new();
+        self.current_message = format!("Starting single test: {}...", benchmark_name);
+        self.completed_tests.clear();
+
+        // Start runner with just this one benchmark
+        let receiver = self.runner.start(vec![benchmark]);
+        self.receiver = Some(receiver);
+        self.state = AppState::Running;
     }
 
     fn process_messages(&mut self) {
@@ -534,7 +630,7 @@ impl eframe::App for WorkBenchProApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             match &self.state {
                 AppState::Home => {
-                    home_action = HomeView::show(ui, &self.system_info);
+                    home_action = HomeView::show(ui, &self.system_info, &mut self.safe_mode);
                 }
                 AppState::PreCheck => {
                     precheck_action = PreCheckView::show(ui, self.system_check.as_ref());
@@ -888,6 +984,12 @@ impl eframe::App for WorkBenchProApp {
             HomeAction::History => {
                 self.reload_history();
                 self.state = AppState::History;
+            }
+            #[cfg(feature = "debug-logging")]
+            HomeAction::RunSingleTest(idx) => {
+                // Debug feature: run a single test directly (skip pre-check)
+                ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(755.0, 750.0)));
+                self.start_single_benchmark(idx);
             }
         }
 

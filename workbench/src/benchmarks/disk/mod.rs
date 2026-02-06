@@ -5,7 +5,7 @@ mod random_read;
 mod traversal;
 
 pub use file_enumeration::FileEnumerationBenchmark;
-pub use large_file_read::LargeFileReadBenchmark;
+pub use large_file_read::{LargeFileReadBenchmark, LargeFileReadLiteBenchmark};
 pub use metadata_ops::MetadataOpsBenchmark;
-pub use random_read::RandomReadBenchmark;
+pub use random_read::{RandomReadBenchmark, RandomReadLiteBenchmark};
 pub use traversal::TraversalBenchmark;
