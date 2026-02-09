@@ -422,6 +422,44 @@ export default function ResultsPage() {
         <meta property="twitter:url" content={helmetCanonical} />
         <meta property="twitter:title" content={helmetTitle} />
         <meta property="twitter:description" content={helmetDescription} />
+        <script type="application/ld+json">{JSON.stringify(
+          urlId && primarySelectedRun
+            ? {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.workbench-pro.com/" },
+                  { "@type": "ListItem", "position": 2, "name": "Results", "item": "https://www.workbench-pro.com/results" },
+                  { "@type": "ListItem", "position": 3, "name": primarySelectedRun.display_name }
+                ]
+              }
+            : {
+                "@context": "https://schema.org",
+                "@type": "BreadcrumbList",
+                "itemListElement": [
+                  { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.workbench-pro.com/" },
+                  { "@type": "ListItem", "position": 2, "name": "Results" }
+                ]
+              }
+        )}</script>
+        {urlId && primarySelectedRun && (
+          <script type="application/ld+json">{JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Dataset",
+            "name": `${primarySelectedRun.display_name} - Workstation Benchmark Results`,
+            "description": helmetDescription,
+            "url": helmetCanonical,
+            "creator": { "@type": "Organization", "name": "WorkBench-Pro" },
+            "variableMeasured": [
+              "CPU Single-Thread Performance",
+              "CPU Multi-Thread Performance",
+              "Disk I/O Throughput",
+              "Memory Bandwidth",
+              "Process Spawn Latency",
+              "Storage Latency"
+            ]
+          })}</script>
+        )}
       </Helmet>
 
       {/* Left Panel - Results List */}

@@ -116,6 +116,14 @@ export default function ComparePage() {
         <meta property="twitter:url" content="https://www.workbench-pro.com/compare" />
         <meta property="twitter:title" content={helmetTitle} />
         <meta property="twitter:description" content={helmetDescription} />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.workbench-pro.com/" },
+            { "@type": "ListItem", "position": 2, "name": "Compare" }
+          ]
+        })}</script>
       </Helmet>
 
       {/* Back link */}

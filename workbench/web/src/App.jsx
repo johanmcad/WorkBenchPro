@@ -4,6 +4,11 @@ import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
 import ResultsPage from './pages/ResultsPage'
 import ComparePage from './pages/ComparePage'
+import AboutPage from './pages/AboutPage'
+import FaqPage from './pages/FaqPage'
+import ChangelogPage from './pages/ChangelogPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
 import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
@@ -16,6 +21,11 @@ function App() {
           <Route path="/results" element={<ResultsPage />} />
           <Route path="/results/:id" element={<ResultsPage />} />
           <Route path="/compare" element={<ComparePage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faq" element={<FaqPage />} />
+          <Route path="/changelog" element={<ChangelogPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>

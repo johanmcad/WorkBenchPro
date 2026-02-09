@@ -122,6 +122,13 @@ export default function HomePage() {
         <meta property="twitter:url" content="https://www.workbench-pro.com/" />
         <meta property="twitter:title" content="WorkBench-Pro | Free Workstation Benchmark" />
         <meta property="twitter:description" content="Free benchmark tool for professionals. Test file I/O, build performance, scripts, and more." />
+        <script type="application/ld+json">{JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "BreadcrumbList",
+          "itemListElement": [
+            { "@type": "ListItem", "position": 1, "name": "Home" }
+          ]
+        })}</script>
       </Helmet>
 
       {/* Hero Section */}
