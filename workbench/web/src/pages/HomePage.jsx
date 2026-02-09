@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useEffect, useState } from 'react'
+import { Helmet } from 'react-helmet-async'
 import {
   Download,
   Cpu,
@@ -111,6 +112,18 @@ export default function HomePage() {
 
   return (
     <div>
+      <Helmet>
+        <title>WorkBench-Pro | Free Workstation Benchmark - Real-World Performance Testing</title>
+        <meta name="description" content="Free benchmark tool for professionals. Test your workstation's real-world performance: file I/O, build tools, scripts, memory bandwidth. Compare your results with the community." />
+        <link rel="canonical" href="https://www.workbench-pro.com/" />
+        <meta property="og:url" content="https://www.workbench-pro.com/" />
+        <meta property="og:title" content="WorkBench-Pro | Free Workstation Benchmark" />
+        <meta property="og:description" content="Free benchmark tool for professionals. Test file I/O, build performance, scripts, and more. Compare your workstation with the community." />
+        <meta property="twitter:url" content="https://www.workbench-pro.com/" />
+        <meta property="twitter:title" content="WorkBench-Pro | Free Workstation Benchmark" />
+        <meta property="twitter:description" content="Free benchmark tool for professionals. Test file I/O, build performance, scripts, and more." />
+      </Helmet>
+
       {/* Hero Section */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-wb-accent/20 via-transparent to-transparent" />

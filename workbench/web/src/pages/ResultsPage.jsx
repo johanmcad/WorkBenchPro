@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import {
   Loader2,
   Cpu,
@@ -390,8 +391,39 @@ export default function ResultsPage() {
     }
   })
 
+  // Dynamic meta tags for individual result pages
+  const helmetTitle = useMemo(() => {
+    if (urlId && primarySelectedRun) {
+      return `${primarySelectedRun.display_name} - ${primarySelectedRun.cpu_name} Benchmark | WorkBench-Pro`
+    }
+    return 'Benchmark Results & Community Scores | WorkBench-Pro'
+  }, [urlId, primarySelectedRun])
+
+  const helmetDescription = useMemo(() => {
+    if (urlId && primarySelectedRun) {
+      return `Benchmark results for ${primarySelectedRun.cpu_name} with ${Math.round(primarySelectedRun.memory_gb)}GB RAM running ${primarySelectedRun.os_name}. See how this workstation compares to the community.`
+    }
+    return 'Browse community benchmark results for workstations. Compare CPU, disk, memory, and responsiveness scores across different hardware configurations.'
+  }, [urlId, primarySelectedRun])
+
+  const helmetCanonical = urlId
+    ? `https://www.workbench-pro.com/results/${urlId}`
+    : 'https://www.workbench-pro.com/results'
+
   return (
     <div className="h-[calc(100vh-120px)] flex">
+      <Helmet>
+        <title>{helmetTitle}</title>
+        <meta name="description" content={helmetDescription} />
+        <link rel="canonical" href={helmetCanonical} />
+        <meta property="og:url" content={helmetCanonical} />
+        <meta property="og:title" content={helmetTitle} />
+        <meta property="og:description" content={helmetDescription} />
+        <meta property="twitter:url" content={helmetCanonical} />
+        <meta property="twitter:title" content={helmetTitle} />
+        <meta property="twitter:description" content={helmetDescription} />
+      </Helmet>
+
       {/* Left Panel - Results List */}
       <div className={`${panelCollapsed ? 'w-10' : 'w-72'} border-r border-wb-border flex flex-col bg-wb-bg-card transition-all duration-200`}>
         <div className="p-2 border-b border-wb-border flex items-center justify-between">

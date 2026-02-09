@@ -4,6 +4,7 @@ import Footer from './components/Footer'
 import HomePage from './pages/HomePage'
 import ResultsPage from './pages/ResultsPage'
 import ComparePage from './pages/ComparePage'
+import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
   return (
@@ -13,7 +14,9 @@ function App() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/results" element={<ResultsPage />} />
+          <Route path="/results/:id" element={<ResultsPage />} />
           <Route path="/compare" element={<ComparePage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
       <Footer />

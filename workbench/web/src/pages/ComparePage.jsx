@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { ArrowLeft, Loader2, GitCompare, Search, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { fetchBenchmarkRuns, fetchBenchmarkRun } from '../api'
 
@@ -86,6 +87,9 @@ export default function ComparePage() {
     )
   }
 
+  const helmetTitle = 'Compare Benchmark Results Side-by-Side | WorkBench-Pro'
+  const helmetDescription = 'Compare workstation benchmark results side-by-side. See CPU, disk, memory, and responsiveness differences between different hardware configurations.'
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -102,6 +106,18 @@ export default function ComparePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Helmet>
+        <title>{helmetTitle}</title>
+        <meta name="description" content={helmetDescription} />
+        <link rel="canonical" href="https://www.workbench-pro.com/compare" />
+        <meta property="og:url" content="https://www.workbench-pro.com/compare" />
+        <meta property="og:title" content={helmetTitle} />
+        <meta property="og:description" content={helmetDescription} />
+        <meta property="twitter:url" content="https://www.workbench-pro.com/compare" />
+        <meta property="twitter:title" content={helmetTitle} />
+        <meta property="twitter:description" content={helmetDescription} />
+      </Helmet>
+
       {/* Back link */}
       <Link
         to="/results"
