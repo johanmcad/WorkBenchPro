@@ -2,6 +2,15 @@ import { Helmet } from 'react-helmet-async'
 
 const releases = [
   {
+    version: '1.2.3',
+    date: 'February 2026',
+    changes: [
+      'Fixed app launch benchmark not showing in results page',
+      'Fixed test values not displaying when percentile data is unavailable',
+      'Added dynamic SEO meta tags for individual result pages',
+    ],
+  },
+  {
     version: '1.2.2',
     date: 'February 2026',
     changes: [
