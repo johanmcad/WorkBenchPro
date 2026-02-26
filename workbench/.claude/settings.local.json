@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(cargo build:*)",
@@ -69,7 +72,14 @@
       "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\WorkBench* 2>nul\")",
       "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\Temp\\\\WorkBench* 2>nul\")",
       "Bash(cmd /c \"dir /s /b C:\\\\Users\\\\Johan\\\\AppData run_*.json 2>nul\")",
-      "Bash(cmd /c \"dir C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\WorkBench-Pro\\\\history\")"
+      "Bash(cmd /c \"dir C:\\\\Users\\\\Johan\\\\AppData\\\\Local\\\\WorkBench-Pro\\\\history\")",
+      "Bash(copy \"target\\\\release\\\\workbench-pro.exe\" \"target\\\\release\\\\workbench-pro-debug.exe\")",
+      "Bash(cmd /c copy \"target\\\\release\\\\workbench-pro.exe\" \"target\\\\release\\\\workbench-pro-debug.exe\")",
+      "Bash(ls:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\Johan\\\\source\\\\repos\\\\WorkBenchPro\\\\workbench\\\\web\\\\crop-images.ps1\")",
+      "Bash(git stash:*)",
+      "WebFetch(domain:www.workbench-pro.com)",
+      "Bash(find:*)"
     ]
   }
 }

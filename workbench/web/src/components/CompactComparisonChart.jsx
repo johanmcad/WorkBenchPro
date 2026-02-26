@@ -455,7 +455,7 @@ function TestRow({ test, selections, isExpanded, onToggle }) {
                   <span className="truncate">{sel.displayName}</span>
                 </div>
                 <div className="font-medium" style={{ color: sel.color.hex }}>
-                  {sel.percentile?.user_value !== undefined ? `${formatValue(sel.percentile.user_value)} ${unit}` : '-'}
+                  {(sel.percentile?.user_value ?? sel.userTest?.value) !== undefined ? `${formatValue(sel.percentile?.user_value ?? sel.userTest?.value)} ${unit}` : '-'}
                 </div>
               </div>
             ))}

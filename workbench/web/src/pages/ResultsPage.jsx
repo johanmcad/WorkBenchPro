@@ -344,7 +344,7 @@ export default function ResultsPage() {
   const getCategoryForTest = (testId) => {
     const projectOps = ['file_enum', 'random_read', 'metadata_ops', 'dir_traversal', 'large_file', 'registry_ops', 'windows_services', 'network_tools']
     const buildPerf = ['single_thread', 'multi_thread', 'mixed_workload', 'cargo_build', 'csharp_compile', 'archive_ops', 'powershell', 'memory_bandwidth', 'memory_latency']
-    const responsive = ['process_spawn', 'thread_wake', 'storage_latency']
+    const responsive = ['process_spawn', 'thread_wake', 'storage_latency', 'applaunch']
 
     if (projectOps.some(p => testId.includes(p))) return 'project_operations'
     if (buildPerf.some(p => testId.includes(p))) return 'build_performance'
